@@ -3141,7 +3141,7 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
         special_eth_addresses = [recipient_0_address, recipient_1_address]
         special_tokens = [order_0_sell_token, order_1_sell_token, fee_token]
         special_accounts = [order_0_sell_amount, order_1_sell_amount]
-        special_prices = [order_0_sell_price, order_0_buy_price, order_1_sell_price, order_1_buy_price]
+        special_prices = [order_0_sell_price, order_0_buy_price, order_0_earnest_price, order_1_sell_price, order_1_buy_price, order_1_earnest_price]
         special_nonces = [account_0_nonce, account_1_nonce, submitter_nonce]
         */
 
@@ -3168,6 +3168,44 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
 
         let zero = Expression::constant::<CS>(E::Fr::zero());
         let one = Expression::constant::<CS>(E::Fr::one());
+
+        let is_not_earnest = [
+            Boolean::from(Expression::equals(
+                cs.namespace(|| "is orderA.amount zero"),
+                &op_data.special_amounts_unpacked[0].get_number(),
+                Expression::u64::<CS>(0u64),
+            )?),
+            Boolean::from(Expression::equals(
+                cs.namespace(|| "is orderA.price_earnest zero"),
+                &op_data.special_prices[2].get_number(),
+                Expression::u64::<CS>(0u64),
+            )?),
+            Boolean::from(Expression::equals(
+                cs.namespace(|| "is orderB.amount zero"),
+                &op_data.special_amounts_unpacked[1].get_number(),
+                Expression::u64::<CS>(0u64),
+            )?),
+            Boolean::from(Expression::equals(
+                cs.namespace(|| "is orderB.price_earnest zero"),
+                &op_data.special_prices[5].get_number(),
+                Expression::u64::<CS>(0u64),
+            )?),
+        ];
+        let is_not_earnest = multi_or(cs.namespace(|| "is not earnest"), &is_not_earnest)?;
+        let earnest_mask = {
+            let earnest_mask = Expression::conditionally_select(
+                cs.namespace(|| "earnest mask"),
+                zero.clone(),
+                one.clone(),
+                &is_not_earnest,
+            )?;
+            CircuitElement::from_fe_with_known_length(
+                cs.namespace(|| "earnest mask construction"),
+                || earnest_mask.get_value().grab(),
+                8,
+            )?
+        };
+        pubdata_bits.extend(earnest_mask.get_bits_be());
 
         let nonce_inc_0 = Expression::select_ifeq(
             cs.namespace(|| "nonce increment 0"),
@@ -3233,6 +3271,7 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
         serialized_order_bits_0.extend(op_data.special_tokens[1].get_bits_be());
         serialized_order_bits_0.extend(op_data.special_prices[0].get_bits_be());
         serialized_order_bits_0.extend(op_data.special_prices[1].get_bits_be());
+        serialized_order_bits_0.extend(op_data.special_prices[2].get_bits_be());
         serialized_order_bits_0.extend(op_data.special_amounts_packed[0].get_bits_be());
         serialized_order_bits_0.extend(op_data.valid_from.get_bits_be());
         serialized_order_bits_0.extend(op_data.valid_until.get_bits_be());
@@ -3244,8 +3283,9 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
         serialized_order_bits_1.extend(op_data.special_nonces[1].get_bits_be());
         serialized_order_bits_1.extend(op_data.special_tokens[1].get_bits_be());
         serialized_order_bits_1.extend(op_data.special_tokens[0].get_bits_be());
-        serialized_order_bits_1.extend(op_data.special_prices[2].get_bits_be());
         serialized_order_bits_1.extend(op_data.special_prices[3].get_bits_be());
+        serialized_order_bits_1.extend(op_data.special_prices[4].get_bits_be());
+        serialized_order_bits_1.extend(op_data.special_prices[5].get_bits_be());
         serialized_order_bits_1.extend(op_data.special_amounts_packed[1].get_bits_be());
         serialized_order_bits_1.extend(op_data.second_valid_from.get_bits_be());
         serialized_order_bits_1.extend(op_data.second_valid_until.get_bits_be());
@@ -3507,9 +3547,15 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
         // Swap.amountB * Swap.orderB.price.buy <= Swap.amountA * Swap.orderB.price.sell
         let is_first_price_ok = {
             let amount_bought = {
+                let price = CircuitElement::conditionally_select(
+                    cs.namespace(|| "orderA.price_buy"),
+                    &op_data.special_prices[1],
+                    &op_data.special_prices[2],
+                    &is_not_earnest,
+                )?;
                 let amount = op_data.amount_unpacked.get_number().mul(
                     cs.namespace(|| "amountA * orderA.price_buy"),
-                    &op_data.special_prices[1].get_number(),
+                    &price.get_number(),
                 )?;
                 CircuitElement::from_number_with_known_length(
                     cs.namespace(|| "amount bought - first order"),
@@ -3540,9 +3586,15 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
 
         let is_second_price_ok = {
             let amount_bought = {
+                let price = CircuitElement::conditionally_select(
+                    cs.namespace(|| "orderB.price_buy"),
+                    &op_data.special_prices[4],
+                    &op_data.special_prices[5],
+                    &is_not_earnest,
+                )?;
                 let amount = op_data.second_amount_unpacked.get_number().mul(
                     cs.namespace(|| "amountB * orderB.price_buy"),
-                    &op_data.special_prices[3].get_number(),
+                    &price.get_number(),
                 )?;
                 CircuitElement::from_number_with_known_length(
                     cs.namespace(|| "amount bought - second order"),
@@ -3554,7 +3606,7 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
             let amount_sold = {
                 let amount = op_data.amount_unpacked.get_number().mul(
                     cs.namespace(|| "amountA * orderB.price_sell"),
-                    &op_data.special_prices[2].get_number(),
+                    &op_data.special_prices[3].get_number(),
                 )?;
                 CircuitElement::from_number_with_known_length(
                     cs.namespace(|| "amount sold - second order"),

@@ -73,6 +73,7 @@ impl TestSwap {
             (
                 BigUint::from(self.first_price.0),
                 BigUint::from(self.first_price.1),
+                BigUint::zero(),
             ),
             amount_0,
             Default::default(),
@@ -89,6 +90,7 @@ impl TestSwap {
             (
                 BigUint::from(self.second_price.0),
                 BigUint::from(self.second_price.1),
+                BigUint::zero(),
             ),
             amount_1,
             Default::default(),

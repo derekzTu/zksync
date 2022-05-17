@@ -17,7 +17,10 @@ use zksync_crypto::{
     },
     primitives::rescue_hash_orders,
 };
-use zksync_utils::{format_units, BigUintPairSerdeAsRadix10Str, BigUintSerdeAsRadix10Str};
+use zksync_utils::{
+    format_units, BigUintPairSerdeAsRadix10Str, BigUintSerdeAsRadix10Str,
+    BigUintTrioSerdeAsRadix10Str,
+};
 
 use super::{TxSignature, VerifiedSignatureCache};
 use crate::tx::error::TransactionSignatureError;
@@ -33,8 +36,8 @@ pub struct Order {
     pub token_buy: TokenId,
     pub token_sell: TokenId,
     #[serde(rename = "ratio")]
-    #[serde(with = "BigUintPairSerdeAsRadix10Str")]
-    pub price: (BigUint, BigUint),
+    #[serde(with = "BigUintTrioSerdeAsRadix10Str")]
+    pub price: (BigUint, BigUint, BigUint),
     #[serde(with = "BigUintSerdeAsRadix10Str")]
     pub amount: BigUint,
     #[serde(flatten)]
@@ -79,6 +82,7 @@ impl Order {
         out.extend_from_slice(&self.token_buy.to_be_bytes());
         out.extend_from_slice(&pad_front(&self.price.0.to_bytes_be(), PRICE_BIT_WIDTH / 8));
         out.extend_from_slice(&pad_front(&self.price.1.to_bytes_be(), PRICE_BIT_WIDTH / 8));
+        out.extend_from_slice(&pad_front(&self.price.2.to_bytes_be(), PRICE_BIT_WIDTH / 8));
         out.extend_from_slice(&pack_token_amount(&self.amount));
         out.extend_from_slice(&self.time_range.as_be_bytes());
         out
@@ -93,6 +97,8 @@ impl Order {
     pub fn check_correctness(&self) -> bool {
         self.price.0.bits() as usize <= PRICE_BIT_WIDTH
             && self.price.1.bits() as usize <= PRICE_BIT_WIDTH
+            && self.price.2.bits() as usize <= PRICE_BIT_WIDTH
+            && (self.price.2.is_zero() || self.price.1.is_zero() || self.price.2 < self.price.1)
             && self.account_id <= max_account_id()
             && self.recipient_address != Address::zero()
             && self.token_buy <= max_token_id()
@@ -117,11 +123,12 @@ impl Order {
             )
         };
         message += format!(
-            "Ratio: {sell}:{buy}\n\
+            "Ratio: {sell}:{buy}({earnest})\n\
             Address: {recipient:?}\n\
             Nonce: {nonce}",
             sell = self.price.0.to_string(),
             buy = self.price.1.to_string(),
+            earnest = self.price.2.to_string(),
             recipient = self.recipient_address,
             nonce = self.nonce
         )
@@ -136,7 +143,7 @@ impl Order {
         nonce: Nonce,
         token_sell: TokenId,
         token_buy: TokenId,
-        price: (BigUint, BigUint),
+        price: (BigUint, BigUint, BigUint),
         amount: BigUint,
         time_range: TimeRange,
         private_key: &PrivateKey<Engine>,

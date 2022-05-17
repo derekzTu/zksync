@@ -80,6 +80,7 @@ impl Witness for CloseAccountWitness<Bn256> {
             first_sig_msg: Some(input.first_sig_msg),
             second_sig_msg: Some(input.second_sig_msg),
             third_sig_msg: Some(input.third_sig_msg),
+            forth_sig_msg: Some(input.forth_sig_msg),
             signature_data: input.signature.clone(),
             signer_pub_key_packed: input.signer_pub_key_packed.to_vec(),
             args: self.args.clone(),

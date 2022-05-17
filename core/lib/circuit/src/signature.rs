@@ -157,6 +157,7 @@ pub fn verify_circuit_signature<E: RescueEngine + JubjubEngine, CS: ConstraintSy
         let mut temp_bits = op_data.first_sig_msg.get_bits_le();
         temp_bits.extend(op_data.second_sig_msg.get_bits_le());
         temp_bits.extend(op_data.third_sig_msg.get_bits_le());
+        temp_bits.extend(op_data.forth_sig_msg.get_bits_le());
         temp_bits
     };
 
@@ -225,15 +226,16 @@ pub fn verify_signature_message_construction<E: JubjubEngine, CS: ConstraintSyst
         Boolean::constant(false),
     );
     let (first_sig_part_bits, remaining) = serialized_tx_bits.split_at(E::Fr::CAPACITY as usize);
-    let remaining = remaining.to_vec();
-    let (second_sig_part_bits, third_sig_part_bits) = remaining.split_at(E::Fr::CAPACITY as usize);
+    let (second_sig_part_bits, remaining) = remaining.split_at(E::Fr::CAPACITY as usize);
+    let (third_sig_part_bits, forth_sig_part_bits) = remaining.split_at(E::Fr::CAPACITY as usize);
     let first_sig_part =
         pack_bits_to_element(cs.namespace(|| "first_sig_part"), &first_sig_part_bits)?;
-
     let second_sig_part =
         pack_bits_to_element(cs.namespace(|| "second_sig_part"), &second_sig_part_bits)?;
     let third_sig_part =
         pack_bits_to_element(cs.namespace(|| "third_sig_part"), &third_sig_part_bits)?;
+    let forth_sig_part =
+        pack_bits_to_element(cs.namespace(|| "forth_sig_part"), &forth_sig_part_bits)?;
 
     let is_first_sig_part_correct = Boolean::from(Expression::equals(
         cs.namespace(|| "is_first_sig_part_correct"),
@@ -252,12 +254,19 @@ pub fn verify_signature_message_construction<E: JubjubEngine, CS: ConstraintSyst
         Expression::from(&third_sig_part),
         Expression::from(&op_data.third_sig_msg.get_number()),
     )?);
+
+    let is_forth_sig_part_correct = Boolean::from(Expression::equals(
+        cs.namespace(|| "is_forth_sig_part_correct"),
+        Expression::from(&forth_sig_part),
+        Expression::from(&op_data.forth_sig_msg.get_number()),
+    )?);
     let is_serialized_transaction_correct = multi_and(
-        cs.namespace(|| "first part and second part"),
+        cs.namespace(|| "first, second, third and forth part"),
         &[
             is_first_sig_part_correct,
             is_second_sig_part_correct,
             is_third_sig_part_correct,
+            is_forth_sig_part_correct,
         ],
     )?;
     Ok(is_serialized_transaction_correct)

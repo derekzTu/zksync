@@ -40,6 +40,7 @@ pub struct OrderData {
     pub amount: u128,
     pub price_sell: u128,
     pub price_buy: u128,
+    pub price_earnest: u128,
     pub valid_from: u64,
     pub valid_until: u64,
 }
@@ -79,6 +80,7 @@ impl Witness for SwapWitness<Bn256> {
             amount: swap.tx.orders.0.amount.to_u128().unwrap(),
             price_sell: swap.tx.orders.0.price.0.to_u128().unwrap(),
             price_buy: swap.tx.orders.0.price.1.to_u128().unwrap(),
+            price_earnest: swap.tx.orders.0.price.2.to_u128().unwrap(),
             valid_from: swap.tx.orders.0.time_range.valid_from,
             valid_until: swap.tx.orders.0.time_range.valid_until,
             nonce: *swap.tx.orders.0.nonce,
@@ -91,6 +93,7 @@ impl Witness for SwapWitness<Bn256> {
             amount: swap.tx.orders.1.amount.to_u128().unwrap(),
             price_sell: swap.tx.orders.1.price.0.to_u128().unwrap(),
             price_buy: swap.tx.orders.1.price.1.to_u128().unwrap(),
+            price_earnest: swap.tx.orders.1.price.2.to_u128().unwrap(),
             valid_from: swap.tx.orders.1.time_range.valid_from,
             valid_until: swap.tx.orders.1.time_range.valid_until,
             nonce: *swap.tx.orders.1.nonce,
@@ -176,6 +179,7 @@ impl Witness for SwapWitness<Bn256> {
             &self.args.fee.unwrap(),
             FEE_MANTISSA_BIT_WIDTH + FEE_EXPONENT_BIT_WIDTH,
         );
+        append_be_fixed_width(&mut pubdata_bits, &self.earnest_mask(), 8);
         append_be_fixed_width(&mut pubdata_bits, &self.nonce_mask(), 8);
 
         resize_grow_only(&mut pubdata_bits, SwapOp::CHUNKS * CHUNK_BIT_WIDTH, false);
@@ -205,6 +209,7 @@ impl Witness for SwapWitness<Bn256> {
                 first_sig_msg: Some(input.0.first_sig_msg),
                 second_sig_msg: Some(input.0.second_sig_msg),
                 third_sig_msg: Some(input.0.third_sig_msg),
+                forth_sig_msg: Some(input.0.forth_sig_msg),
                 signature_data: input.0.signature.clone(),
                 signer_pub_key_packed: input.0.signer_pub_key_packed.to_vec(),
                 args: OperationArguments {
@@ -223,6 +228,7 @@ impl Witness for SwapWitness<Bn256> {
                 first_sig_msg: Some(input.0.first_sig_msg),
                 second_sig_msg: Some(input.0.second_sig_msg),
                 third_sig_msg: Some(input.0.third_sig_msg),
+                forth_sig_msg: Some(input.0.forth_sig_msg),
                 signature_data: input.0.signature.clone(),
                 signer_pub_key_packed: input.0.signer_pub_key_packed.to_vec(),
                 args: OperationArguments {
@@ -241,6 +247,7 @@ impl Witness for SwapWitness<Bn256> {
                 first_sig_msg: Some(input.1.first_sig_msg),
                 second_sig_msg: Some(input.1.second_sig_msg),
                 third_sig_msg: Some(input.1.third_sig_msg),
+                forth_sig_msg: Some(input.1.forth_sig_msg),
                 signature_data: input.1.signature.clone(),
                 signer_pub_key_packed: input.1.signer_pub_key_packed.to_vec(),
                 args: OperationArguments {
@@ -259,6 +266,7 @@ impl Witness for SwapWitness<Bn256> {
                 first_sig_msg: Some(input.1.first_sig_msg),
                 second_sig_msg: Some(input.1.second_sig_msg),
                 third_sig_msg: Some(input.1.third_sig_msg),
+                forth_sig_msg: Some(input.1.forth_sig_msg),
                 signature_data: input.1.signature.clone(),
                 signer_pub_key_packed: input.1.signer_pub_key_packed.to_vec(),
                 args: OperationArguments {
@@ -277,6 +285,7 @@ impl Witness for SwapWitness<Bn256> {
                 first_sig_msg: Some(input.2.first_sig_msg),
                 second_sig_msg: Some(input.2.second_sig_msg),
                 third_sig_msg: Some(input.2.third_sig_msg),
+                forth_sig_msg: Some(input.2.forth_sig_msg),
                 signature_data: input.2.signature.clone(),
                 signer_pub_key_packed: input.2.signer_pub_key_packed.to_vec(),
                 args: OperationArguments {
@@ -292,6 +301,18 @@ impl Witness for SwapWitness<Bn256> {
 }
 
 impl SwapWitness<Bn256> {
+    fn earnest_mask(&self) -> Fr {
+        if self.args.special_amounts[0].unwrap().is_zero()
+            || self.args.special_prices[2].unwrap().is_zero()
+            || self.args.special_amounts[1].unwrap().is_zero()
+            || self.args.special_prices[5].unwrap().is_zero()
+        {
+            Fr::zero()
+        } else {
+            Fr::one()
+        }
+    }
+
     fn nonce_mask(&self) -> Fr {
         // a = 0 if orders.0.amount == 0 else 1
         // b = 0 if orders.1.amount == 0 else 1
@@ -337,8 +358,10 @@ impl SwapWitness<Bn256> {
         let special_prices: Vec<_> = vec![
             swap.orders.0.price_sell,
             swap.orders.0.price_buy,
+            swap.orders.0.price_earnest,
             swap.orders.1.price_sell,
             swap.orders.1.price_buy,
+            swap.orders.1.price_earnest,
         ]
         .into_iter()
         .map(|x| Some(fr_from(x)))

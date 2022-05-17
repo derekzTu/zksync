@@ -31,6 +31,7 @@ pub mod operations_test {
     use super::*;
     use crate::tx::{ChangePubKeyECDSAData, ChangePubKeyEthAuthData};
     use crate::{MintNFT, MintNFTOp};
+    use num::Zero;
     use zksync_crypto::params::MIN_NFT_TOKEN_ID;
 
     // Public data parameters, using them we can restore `ZkSyncOp`.
@@ -43,7 +44,7 @@ pub mod operations_test {
     const FULL_EXIT_PUBLIC_DATA: &str = "060000002a2a0a81e257a2f5d6ed4f07b81dbda09f107bd0260000002a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
     const CHANGE_PUBKEY_PUBLIC_DATA: &str = "070000002a3cfb9a39096d9e02b24187355f628f9a6331511b2a0a81e257a2f5d6ed4f07b81dbda09f107bd0260000002a0000002a05400000000000";
     const FORCED_EXIT_PUBLIC_DATA: &str = "080000002a0000002a0000002a0000000000000000000000000000000005402a0a81e257a2f5d6ed4f07b81dbda09f107bd026000000000000000000";
-    const SWAP_PUBLIC_DATA: &str = "0b000000050000000600000007000000080000002a00000007000000010000002d00000012200000001b2005800200000000";
+    const SWAP_PUBLIC_DATA: &str = "0b000000050000000600000007000000080000002a00000007000000010000002d00000012200000001b2005800002000000";
     const MINT_NFT_PUBLIC_DATA: &str = "090000000a0000000b0000000000000000000000000000000000000000000000000000000000000000000000000140000000";
     const WITHDRAW_NFT_PUBLIC_DATA: &str = "0a0000002a0000002b21abaed8712072e918632259780e587698ef58da00000000000000000000000000000000000000000000000000000000000000000000000021abaed8712072e918632259780e587698ef58da000100000000002a05400000000000";
 
@@ -265,7 +266,7 @@ pub mod operations_test {
                         token_buy: TokenId(1),
                         token_sell: TokenId(7),
                         amount: BigUint::from(0u8),
-                        price: (BigUint::from(1u8), BigUint::from(2u8)),
+                        price: (BigUint::from(1u8), BigUint::from(2u8), BigUint::zero()),
                         time_range: TimeRange::new(0, 1 << 31),
                         signature: Default::default(),
                     },
@@ -276,7 +277,7 @@ pub mod operations_test {
                         token_buy: TokenId(7),
                         token_sell: TokenId(1),
                         amount: BigUint::from(12345u32),
-                        price: (BigUint::from(2u8), BigUint::from(1u8)),
+                        price: (BigUint::from(2u8), BigUint::from(1u8), BigUint::zero()),
                         time_range: TimeRange::new(0, 1 << 31),
                         signature: Default::default(),
                     },
@@ -362,6 +363,7 @@ pub mod operations_test {
 #[cfg(test)]
 pub mod tx_conversion_test {
     use super::*;
+    use num::Zero;
 
     // General configuration parameters for all types of operations
     const ACCOUNT_ID: AccountId = AccountId(100);
@@ -404,7 +406,11 @@ pub mod tx_conversion_test {
                     token_buy: TOKEN_ID,
                     token_sell: TOKEN_ID_2,
                     amount: AMOUNT.clone(),
-                    price: (&*AMOUNT + BigUint::from(2u8), AMOUNT_2.clone()),
+                    price: (
+                        &*AMOUNT + BigUint::from(2u8),
+                        AMOUNT_2.clone(),
+                        BigUint::zero(),
+                    ),
                     time_range: *TIME_RANGE,
                     signature: Default::default(),
                 },
@@ -415,7 +421,11 @@ pub mod tx_conversion_test {
                     token_buy: TOKEN_ID_2,
                     token_sell: TOKEN_ID,
                     amount: AMOUNT_2.clone(),
-                    price: (&*AMOUNT_2 + BigUint::from(2u8), AMOUNT.clone()),
+                    price: (
+                        &*AMOUNT_2 + BigUint::from(2u8),
+                        AMOUNT.clone(),
+                        BigUint::zero(),
+                    ),
                     time_range: *TIME_RANGE,
                     signature: Default::default(),
                 },
@@ -427,7 +437,7 @@ pub mod tx_conversion_test {
         );
 
         let bytes = swap.get_bytes();
-        assert_eq!(hex::encode(bytes), "f401000000642a0a81e257a2f5d6ed4f07b81dbda09f107bd026000000146f01000000c821abaed8712072e918632259780e587698ef58da0000001e0000000600000005000000000000000000000000bc6150000000000000000000000005397fb100178c29c000000000000000000000000060183ed06f010000012c002b598a1fc2f0d8240fbd8b13131b9eab0165a3000000280000000500000006000000000000000000000005397fb3000000000000000000000000bc614e00a72ff62000000000000000000000000060183ed0000000127d0300178c29c000a72ff620");
+        assert_eq!(hex::encode(bytes), "f401000000642a0a81e257a2f5d6ed4f07b81dbda09f107bd026000000146f01000000c821abaed8712072e918632259780e587698ef58da0000001e0000000600000005000000000000000000000000bc6150000000000000000000000005397fb100000000000000000000000000000000178c29c000000000000000000000000060183ed06f010000012c002b598a1fc2f0d8240fbd8b13131b9eab0165a3000000280000000500000006000000000000000000000005397fb3000000000000000000000000bc614e00000000000000000000000000000000a72ff62000000000000000000000000060183ed0000000127d0300178c29c000a72ff620");
     }
 
     #[test]

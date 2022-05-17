@@ -1,6 +1,6 @@
 use crate::eth_account::EthereumAccount;
 use crate::zksync_account::ZkSyncAccount;
-use num::BigUint;
+use num::{BigUint, Zero};
 use web3::types::{TransactionReceipt, H256, U64};
 use zksync_crypto::rand::Rng;
 use zksync_types::tx::{ChangePubKeyType, TimeRange};
@@ -377,6 +377,7 @@ impl AccountSet {
             tokens.1 .0,
             amounts.0.clone(),
             amounts.1.clone(),
+            BigUint::zero(),
             amounts.0.clone(),
             &accounts.2.address,
             None,
@@ -389,6 +390,7 @@ impl AccountSet {
             tokens.0 .0,
             amounts.1.clone(),
             amounts.0.clone(),
+            BigUint::zero(),
             amounts.1.clone(),
             &accounts.3.address,
             None,

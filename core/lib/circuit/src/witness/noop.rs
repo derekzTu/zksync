@@ -21,6 +21,7 @@ pub fn noop_operation(tree: &CircuitAccountTree, acc_id: u32) -> Operation<Bn256
     let first_sig_msg = Fr::zero();
     let second_sig_msg = Fr::zero();
     let third_sig_msg = Fr::zero();
+    let forth_sig_msg = Fr::zero();
     let signer_pub_key_packed = [Some(false); 256];
 
     let acc = tree.get(acc_id).unwrap();
@@ -45,6 +46,7 @@ pub fn noop_operation(tree: &CircuitAccountTree, acc_id: u32) -> Operation<Bn256
         first_sig_msg: Some(first_sig_msg),
         second_sig_msg: Some(second_sig_msg),
         third_sig_msg: Some(third_sig_msg),
+        forth_sig_msg: Some(forth_sig_msg),
         signature_data,
         signer_pub_key_packed: signer_pub_key_packed.to_vec(),
 

@@ -126,6 +126,8 @@ pub struct OperationDef {
     pub second_sig_msg: Option<Fr>,
     #[serde(with = "OptionalFrSerde")]
     pub third_sig_msg: Option<Fr>,
+    #[serde(with = "OptionalFrSerde")]
+    pub forth_sig_msg: Option<Fr>,
     pub signature_data: SignatureData,
     #[serde(with = "OperationArgumentsDef")]
     pub args: OperationArguments<Engine>,

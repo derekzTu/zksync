@@ -139,7 +139,7 @@ pub const LEGACY_CHUNK_BYTES: usize = LEGACY_CHUNK_BIT_WIDTH / 8;
 pub const CHUNK_BIT_WIDTH: usize = 80;
 pub const CHUNK_BYTES: usize = CHUNK_BIT_WIDTH / 8;
 
-pub const MAX_CIRCUIT_MSG_HASH_BITS: usize = 736;
+pub const MAX_CIRCUIT_MSG_HASH_BITS: usize = 864;
 
 pub const ETH_ADDRESS_BIT_WIDTH: usize = 160;
 /// Block number bit width
@@ -176,7 +176,7 @@ pub const LEAF_DATA_BIT_WIDTH: usize =
 pub const PRIORITY_EXPIRATION: u64 = 35000; // TODO: Check that in the future this constant cannot cause unexpected behavior (ZKS-520).
 pub const FR_ADDRESS_LEN: usize = 20;
 
-pub const PAD_MSG_BEFORE_HASH_BITS_LEN: usize = 736;
+pub const PAD_MSG_BEFORE_HASH_BITS_LEN: usize = 864;
 
 /// Size of the data that is signed for withdraw tx
 pub const SIGNED_WITHDRAW_BIT_WIDTH: usize = TX_TYPE_BIT_WIDTH

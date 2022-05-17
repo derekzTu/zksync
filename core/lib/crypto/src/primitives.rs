@@ -386,13 +386,13 @@ pub fn rescue_hash_tx_msg(msg: &[u8]) -> Vec<u8> {
 }
 
 // This differs from `rescue_hash_tx_msg` in several ways:
-// - It does not constrain its input to be <= 92 bytes
-//   In fact, it only accepts inputs of 176 bytes (2 * order_size)
+// - It does not constrain its input to be <= 108 bytes
+//   In fact, it only accepts inputs of 208 bytes (2 * order_size)
 // - It does not pad its message
 // - It encodes the resulting Fr a bit differently
 // - It returns 31 byte instead of 32
 pub fn rescue_hash_orders(msg: &[u8]) -> Vec<u8> {
-    assert_eq!(msg.len(), 178);
+    assert_eq!(msg.len(), 208);
     let msg_bits = BitConvert::from_be_bytes(msg);
     let hasher = &params::RESCUE_HASHER as &BabyRescueHasher;
     let hash_fr = hasher.hash_bits(msg_bits.into_iter());
@@ -532,8 +532,8 @@ mod test {
         assert_eq!(
             hash,
             vec![
-                249, 154, 208, 123, 96, 89, 132, 235, 231, 63, 56, 200, 153, 131, 27, 183, 128, 71,
-                26, 245, 208, 120, 49, 246, 233, 72, 230, 84, 66, 150, 170, 27
+                51, 24, 218, 98, 7, 105, 103, 210, 146, 64, 114, 163, 107, 102, 92, 69, 28, 122,
+                214, 107, 103, 223, 250, 129, 225, 161, 88, 248, 93, 79, 90, 21
             ]
         );
     }

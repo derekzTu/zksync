@@ -1,4 +1,4 @@
-use num::{BigUint, ToPrimitive};
+use num::{BigUint, ToPrimitive, Zero};
 use serde::{Deserialize, Serialize};
 use zksync_basic_types::Address;
 use zksync_crypto::{
@@ -56,7 +56,7 @@ fn test_print_swap_for_protocol() {
         Nonce(rng.gen()),
         token_a,
         token_b,
-        (BigUint::from(12u8), BigUint::from(18u8)),
+        (BigUint::from(12u8), BigUint::from(18u8), BigUint::zero()),
         BigUint::from(12_000_000_000u64),
         Default::default(),
         &key_0,
@@ -69,7 +69,7 @@ fn test_print_swap_for_protocol() {
         Nonce(rng.gen()),
         token_b,
         token_a,
-        (BigUint::from(18u8), BigUint::from(12u8)),
+        (BigUint::from(18u8), BigUint::from(12u8), BigUint::zero()),
         BigUint::from(18_000_000_000u64),
         Default::default(),
         &key_1,
@@ -583,5 +583,5 @@ fn test_check_signature() {
         .serialize_packed()
         .unwrap();
 
-    assert_eq!(hex::encode(signature), "4e3298ac8cc13868dbbc94ad6fb41085ffe05b3c2eee22f88b05e69b7a5126aea723d7a3e7282ef5a32d9479c9c8dde52b3e3c462dd445dcd8158ebb6edb6000");
+    assert_eq!(hex::encode(signature), "e339b16e25d552053e2f7ecf472cce1993519ba962d27bac620650b7f723991fb50ce7d14858535a8aaf95d15d98eae7b98541eb5e02e197efa25feaa8665c04");
 }

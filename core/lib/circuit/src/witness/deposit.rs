@@ -103,6 +103,7 @@ impl Witness for DepositWitness<Bn256> {
         let first_sig_msg = &Fr::zero();
         let second_sig_msg = &Fr::zero();
         let third_sig_msg = &Fr::zero();
+        let forth_sig_msg = &Fr::zero();
         let signature_data = &SignatureData::init_empty();
         let signer_pub_key_packed = &[Some(false); 256]; //doesn't matter for deposit
         let pubdata_chunks: Vec<_> = self
@@ -124,6 +125,7 @@ impl Witness for DepositWitness<Bn256> {
             first_sig_msg: Some(*first_sig_msg),
             second_sig_msg: Some(*second_sig_msg),
             third_sig_msg: Some(*third_sig_msg),
+            forth_sig_msg: Some(*forth_sig_msg),
             signature_data: signature_data.clone(),
             signer_pub_key_packed: signer_pub_key_packed.to_vec(),
             args: self.args.clone(),
@@ -139,6 +141,7 @@ impl Witness for DepositWitness<Bn256> {
             first_sig_msg: Some(*first_sig_msg),
             second_sig_msg: Some(*second_sig_msg),
             third_sig_msg: Some(*third_sig_msg),
+            forth_sig_msg: Some(*forth_sig_msg),
             signature_data: signature_data.clone(),
             signer_pub_key_packed: signer_pub_key_packed.to_vec(),
             args: self.args.clone(),

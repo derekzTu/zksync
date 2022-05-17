@@ -293,18 +293,25 @@ pub fn generate_dummy_sig_data(
     )
 }
 
-pub fn generate_sig_witness(bits: &[bool]) -> (Fr, Fr, Fr) {
+pub fn generate_sig_witness(bits: &[bool]) -> (Fr, Fr, Fr, Fr) {
     let mut sig_bits_to_hash = bits.to_vec();
     assert!(sig_bits_to_hash.len() < MAX_CIRCUIT_MSG_HASH_BITS);
 
     sig_bits_to_hash.resize(MAX_CIRCUIT_MSG_HASH_BITS, false);
     let (first_sig_part_bits, remaining) = sig_bits_to_hash.split_at(Fr::CAPACITY as usize);
-    let remaining = remaining.to_vec();
-    let (second_sig_part_bits, third_sig_part_bits) = remaining.split_at(Fr::CAPACITY as usize);
+    let (second_sig_part_bits, remaining) = remaining.split_at(Fr::CAPACITY as usize);
+    let (third_sig_part_bits, forth_sig_part_bits) = remaining.split_at(Fr::CAPACITY as usize);
     let first_sig_part: Fr = le_bit_vector_into_field_element(&first_sig_part_bits);
     let second_sig_part: Fr = le_bit_vector_into_field_element(&second_sig_part_bits);
     let third_sig_part: Fr = le_bit_vector_into_field_element(&third_sig_part_bits);
-    (first_sig_part, second_sig_part, third_sig_part)
+    let forth_sig_part: Fr = le_bit_vector_into_field_element(&forth_sig_part_bits);
+
+    (
+        first_sig_part,
+        second_sig_part,
+        third_sig_part,
+        forth_sig_part,
+    )
 }
 
 pub fn public_data_commitment<E: JubjubEngine>(
@@ -513,6 +520,7 @@ pub struct SigDataInput {
     pub first_sig_msg: Fr,
     pub second_sig_msg: Fr,
     pub third_sig_msg: Fr,
+    pub forth_sig_msg: Fr,
     pub signature: SignatureData,
     pub signer_pub_key_packed: Vec<Option<bool>>,
 }
@@ -540,7 +548,8 @@ impl SigDataInput {
         };
         let sig_bits: Vec<bool> = zksync_crypto::primitives::BitConvert::from_be_bytes(&tx_bytes);
 
-        let (first_sig_msg, second_sig_msg, third_sig_msg) = self::generate_sig_witness(&sig_bits);
+        let (first_sig_msg, second_sig_msg, third_sig_msg, forth_sig_msg) =
+            self::generate_sig_witness(&sig_bits);
 
         let signer_packed_key_bytes = pub_key.serialize_packed()?;
         let signer_pub_key_packed: Vec<_> =
@@ -552,6 +561,7 @@ impl SigDataInput {
             first_sig_msg,
             second_sig_msg,
             third_sig_msg,
+            forth_sig_msg,
             signature,
             signer_pub_key_packed,
         })
@@ -704,6 +714,10 @@ impl SigDataInput {
             },
             SigDataInput {
                 third_sig_msg: incorrect_fr,
+                ..self.clone()
+            },
+            SigDataInput {
+                forth_sig_msg: incorrect_fr,
                 ..self.clone()
             },
             SigDataInput {

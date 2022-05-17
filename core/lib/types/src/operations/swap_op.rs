@@ -1,4 +1,4 @@
-use num::Zero;
+use num::{BigUint, Zero};
 use serde::{Deserialize, Serialize};
 use zksync_crypto::params::{
     ACCOUNT_ID_BIT_WIDTH, AMOUNT_EXPONENT_BIT_WIDTH, AMOUNT_MANTISSA_BIT_WIDTH, CHUNK_BYTES,
@@ -39,6 +39,16 @@ impl SwapOp {
         data.extend_from_slice(&pack_token_amount(&self.tx.amounts.0));
         data.extend_from_slice(&pack_token_amount(&self.tx.amounts.1));
         data.extend_from_slice(&pack_fee_amount(&self.tx.fee));
+        let earnest_mask = if self.tx.orders.0.amount.is_zero()
+            || self.tx.orders.0.price.2.is_zero()
+            || self.tx.orders.1.amount.is_zero()
+            || self.tx.orders.1.price.2.is_zero()
+        {
+            0u8
+        } else {
+            1u8
+        };
+        data.push(earnest_mask);
         let nonce_mask = (!self.tx.orders.0.amount.is_zero() as u8)
             + (!self.tx.orders.1.amount.is_zero() as u8) * 2;
         data.push(nonce_mask);
@@ -58,6 +68,7 @@ impl SwapOp {
         let tokens_offset = accounts_offset + ACCOUNT_ID_BIT_WIDTH * 5 / 8;
         let amounts_offset = tokens_offset + ACCOUNT_ID_BIT_WIDTH * 3 / 8;
         let fee_offset = amounts_offset + AMOUNT_BIT_WIDTH * 2 / 8;
+        let masks_offset = fee_offset + FEE_BIT_WIDTH / 8;
 
         let read_token = |offset| {
             u32::from_bytes(&bytes[offset..offset + TOKEN_BIT_WIDTH / 8])
@@ -93,7 +104,8 @@ impl SwapOp {
         let amount_0 = read_amount(amounts_offset)?;
         let amount_1 = read_amount(amounts_offset + AMOUNT_BIT_WIDTH / 8)?;
         let nonce = Nonce(0); // It is unknown from pubdata
-        let nonce_mask = bytes[fee_offset + FEE_BIT_WIDTH / 8];
+        let earnest = (bytes[masks_offset] & 1) != 0;
+        let nonce_mask = bytes[masks_offset + 1];
 
         let order_a = Order {
             account_id: account_id_0,
@@ -105,7 +117,11 @@ impl SwapOp {
             token_sell: token_0,
             time_range: Default::default(),
             signature: Default::default(),
-            price: (amount_0.clone(), amount_1.clone()),
+            price: if !earnest {
+                (amount_0.clone(), amount_1.clone(), BigUint::zero())
+            } else {
+                (amount_0.clone(), BigUint::zero(), amount_1.clone())
+            },
         };
 
         let order_b = Order {
@@ -119,7 +135,11 @@ impl SwapOp {
             token_sell: token_1,
             time_range: Default::default(),
             signature: Default::default(),
-            price: (amount_1.clone(), amount_0.clone()),
+            price: if !earnest {
+                (amount_1.clone(), amount_0.clone(), BigUint::zero())
+            } else {
+                (amount_1.clone(), BigUint::zero(), amount_0.clone())
+            },
         };
 
         Ok(Self {

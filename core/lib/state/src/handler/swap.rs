@@ -173,13 +173,28 @@ impl ZkSyncState {
             SwapOpError::SelfSwap
         );
 
-        let sold = &swap.amounts.0 * &swap.orders.0.price.1;
-        let bought = &swap.amounts.1 * &swap.orders.0.price.0;
-        invariant!(sold <= bought, SwapOpError::AmountsNotCompatible);
+        if swap.orders.0.amount.is_zero()
+            || swap.orders.0.price.2.is_zero()
+            || swap.orders.1.amount.is_zero()
+            || swap.orders.1.price.2.is_zero()
+        {
+            let sold = &swap.amounts.0 * &swap.orders.0.price.1;
+            let bought = &swap.amounts.1 * &swap.orders.0.price.0;
+            invariant!(sold <= bought, SwapOpError::AmountsNotCompatible);
 
-        let sold = &swap.amounts.1 * &swap.orders.1.price.1;
-        let bought = &swap.amounts.0 * &swap.orders.1.price.0;
-        invariant!(sold <= bought, SwapOpError::AmountsNotCompatible);
+            let sold = &swap.amounts.1 * &swap.orders.1.price.1;
+            let bought = &swap.amounts.0 * &swap.orders.1.price.0;
+            invariant!(sold <= bought, SwapOpError::AmountsNotCompatible);
+        } else {
+            let sold = &swap.amounts.0 * &swap.orders.0.price.2;
+            let bought = &swap.amounts.1 * &swap.orders.0.price.0;
+            invariant!(sold <= bought, SwapOpError::AmountsNotCompatible);
+
+            let sold = &swap.amounts.1 * &swap.orders.1.price.2;
+            let bought = &swap.amounts.0 * &swap.orders.1.price.0;
+            invariant!(sold <= bought, SwapOpError::AmountsNotCompatible);
+        }
+
         Ok(())
     }
 
