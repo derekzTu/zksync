@@ -88,6 +88,7 @@ fn zksync_circuit(block_chunks: usize) -> impl Circuit<Engine> + Clone {
         first_sig_msg: None,
         second_sig_msg: None,
         third_sig_msg: None,
+        forth_sig_msg: None,
         signature_data: SignatureData::init_empty(),
         args: OperationArguments {
             a: None,
@@ -95,7 +96,7 @@ fn zksync_circuit(block_chunks: usize) -> impl Circuit<Engine> + Clone {
             amount_packed: None,
             second_amount_packed: None,
             special_amounts: vec![None; 2],
-            special_prices: vec![None; 4],
+            special_prices: vec![None; 6],
             special_nonces: vec![None; 3],
             special_tokens: vec![None; 3],
             special_accounts: vec![None; 5],

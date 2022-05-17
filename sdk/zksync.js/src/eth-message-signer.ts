@@ -105,7 +105,7 @@ export class EthMessageSigner {
             message = `Order for ${order.amount} ${order.tokenSell} -> ${order.tokenBuy}\n`;
         }
         message +=
-            `Ratio: ${order.ratio[0].toString()}:${order.ratio[1].toString()}\n` +
+            `Ratio: ${order.ratio[0].toString()}:${order.ratio[1].toString()}(${order.ratio[2].toString()})\n` +
             `Address: ${order.recipient.toLowerCase()}\n` +
             `Nonce: ${order.nonce}`;
         return message;

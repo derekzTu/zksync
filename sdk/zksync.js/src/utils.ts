@@ -60,14 +60,22 @@ const AMOUNT_MANTISSA_BIT_WIDTH = 35;
 const FEE_EXPONENT_BIT_WIDTH = 5;
 const FEE_MANTISSA_BIT_WIDTH = 11;
 
-export function tokenRatio(ratio: { [token: string]: string | number; [token: number]: string | number }): TokenRatio {
+export function tokenRatio(ratio: {
+    [token: string]: string | number;
+    [token: number]: string | number;
+    $earnest?: string | number;
+}): TokenRatio {
     return {
         type: 'Token',
         ...ratio
     };
 }
 
-export function weiRatio(ratio: { [token: string]: BigNumberish; [token: number]: BigNumberish }): WeiRatio {
+export function weiRatio(ratio: {
+    [token: string]: BigNumberish;
+    [token: number]: BigNumberish;
+    $earnest?: BigNumberish;
+}): WeiRatio {
     return {
         type: 'Wei',
         ...ratio
@@ -638,6 +646,7 @@ export function serializeOrder(order: Order): Uint8Array {
     const tokenBuyId = serializeTokenId(order.tokenBuy);
     const sellPriceBytes = BigNumber.from(order.ratio[0]).toHexString();
     const buyPriceBytes = BigNumber.from(order.ratio[1]).toHexString();
+    const earnestPriceBytes = BigNumber.from(order.ratio[2]).toHexString();
     const amountBytes = serializeAmountPacked(order.amount);
     const validFrom = serializeTimestamp(order.validFrom);
     const validUntil = serializeTimestamp(order.validUntil);
@@ -651,6 +660,7 @@ export function serializeOrder(order: Order): Uint8Array {
         tokenBuyId,
         ethers.utils.zeroPad(sellPriceBytes, 15),
         ethers.utils.zeroPad(buyPriceBytes, 15),
+        ethers.utils.zeroPad(earnestPriceBytes, 15),
         amountBytes,
         validFrom,
         validUntil

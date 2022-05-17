@@ -3,7 +3,7 @@ import * as utils from '../utils';
 import path from 'path';
 import fs from 'fs';
 
-function verfiyKeysTarball() {
+function verifyKeysTarball() {
     const accountTreeDepth = process.env.CHAIN_CIRCUIT_ACCOUNT_TREE_DEPTH;
     const balanceTreeDepth = process.env.CHAIN_CIRCUIT_BALANCE_TREE_DEPTH;
     const keyDir = path.basename(process.env.CHAIN_CIRCUIT_KEY_DIR as string);
@@ -32,7 +32,7 @@ export async function gen(command: 'contract' | 'all' | 'circuit-size') {
 }
 
 export async function unpack() {
-    const keysTarball = verfiyKeysTarball();
+    const keysTarball = verifyKeysTarball();
     if (!fs.existsSync(`keys/packed/${keysTarball}`)) {
         throw new Error(`Keys file ${keysTarball} not found`);
     }
@@ -41,7 +41,7 @@ export async function unpack() {
 }
 
 export async function pack() {
-    const keysTarball = verfiyKeysTarball();
+    const keysTarball = verifyKeysTarball();
     fs.mkdirSync('keys/packed', { recursive: true });
     await utils.exec(`tar cvzf keys/packed/${keysTarball}  ${process.env.CHAIN_CIRCUIT_KEY_DIR}/*`);
     console.log('Keys packed');

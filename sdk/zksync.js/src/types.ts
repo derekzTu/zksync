@@ -117,13 +117,14 @@ export interface Signature {
     signature: string;
 }
 
-export type Ratio = [BigNumberish, BigNumberish];
+export type Ratio = [BigNumberish, BigNumberish, BigNumberish];
 
 /// represents ratio between tokens themself
 export type TokenRatio = {
     type: 'Token';
     [token: string]: string | number;
     [token: number]: string | number;
+    $earnest?: string | number;
 };
 
 /// represents ratio between lowest token denominations (wei, satoshi, etc.)
@@ -131,6 +132,7 @@ export type WeiRatio = {
     type: 'Wei';
     [token: string]: BigNumberish;
     [token: number]: BigNumberish;
+    $earnest?: BigNumberish;
 };
 
 export interface Order {
