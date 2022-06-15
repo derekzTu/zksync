@@ -63,6 +63,7 @@ pub struct ZkSyncCircuit<'a, E: RescueEngine + JubjubEngine> {
     pub validator_balances: Vec<Option<E::Fr>>,
     pub validator_audit_path: Vec<Option<E::Fr>>,
     pub validator_account: AccountWitness<E>,
+    pub validator_obsoletes_root: Option<E::Fr>,
 
     pub validator_non_processable_tokens_audit_before_fees: Vec<Option<E::Fr>>,
     pub validator_non_processable_tokens_audit_after_fees: Vec<Option<E::Fr>>,
@@ -91,6 +92,7 @@ impl<'a, E: RescueEngine + JubjubEngine> std::clone::Clone for ZkSyncCircuit<'a,
             validator_balances: self.validator_balances.clone(),
             validator_audit_path: self.validator_audit_path.clone(),
             validator_account: self.validator_account.clone(),
+            validator_obsoletes_root: self.validator_obsoletes_root,
 
             validator_non_processable_tokens_audit_before_fees: self
                 .validator_non_processable_tokens_audit_before_fees
@@ -297,12 +299,13 @@ impl<'a, E: RescueEngine + JubjubEngine> Circuit<E> for ZkSyncCircuit<'a, E> {
             )?;
 
             // calculate root for given account data
-            let (state_root, is_account_empty, _subtree_root) = check_account_data(
-                cs.namespace(|| "calculate account root"),
-                &current_branch,
-                params::used_account_subtree_depth(),
-                self.rescue_params,
-            )?;
+            let (state_root, is_account_empty, _subtree_root, _obsoletes_root) =
+                check_account_data(
+                    cs.namespace(|| "calculate account root"),
+                    &current_branch,
+                    params::used_account_subtree_depth(),
+                    self.rescue_params,
+                )?;
 
             // ensure root hash of state before applying operation is correct
             cs.enforce(
@@ -340,7 +343,7 @@ impl<'a, E: RescueEngine + JubjubEngine> Circuit<E> for ZkSyncCircuit<'a, E> {
                 &is_special_nft_storage_account,
                 &is_special_nft_token,
             )?;
-            let (new_state_root, _, _) = check_account_data(
+            let (new_state_root, _, _, _) = check_account_data(
                 cs.namespace(|| "calculate new account root"),
                 &current_branch,
                 params::used_account_subtree_depth(),
@@ -389,6 +392,10 @@ impl<'a, E: RescueEngine + JubjubEngine> Circuit<E> for ZkSyncCircuit<'a, E> {
             cs.namespace(|| "validator account"),
             &self.validator_account,
         )?;
+        let validator_obsoletes_root =
+            CircuitElement::from_fe(cs.namespace(|| "validator_obsoletes_root"), || {
+                self.validator_obsoletes_root.grab()
+            })?;
 
         // calculate operator's balance_tree root hash from processable tokens balances full representation
         let validator_non_processable_tokens_audit_before_fees = allocate_numbers_vec(
@@ -411,6 +418,7 @@ impl<'a, E: RescueEngine + JubjubEngine> Circuit<E> for ZkSyncCircuit<'a, E> {
             calc_account_state_tree_root(
                 cs.namespace(|| "old_operator_state_root"),
                 &balance_root,
+                &validator_obsoletes_root,
                 &self.rescue_params,
             )?
         };
@@ -467,6 +475,7 @@ impl<'a, E: RescueEngine + JubjubEngine> Circuit<E> for ZkSyncCircuit<'a, E> {
             calc_account_state_tree_root(
                 cs.namespace(|| "new_operator_state_root"),
                 &balance_root,
+                &validator_obsoletes_root,
                 &self.rescue_params,
             )?
         };
@@ -754,7 +763,7 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
             )?,
             balance_audit_path: select_vec_ifeq(
                 cs.namespace(|| "balance_audit_path"),
-                left_side,
+                left_side.clone(),
                 &cur_side,
                 &first.balance_audit_path,
                 &second.balance_audit_path,
@@ -763,6 +772,25 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
                 cs.namespace(|| "chosen token"),
                 &first.token,
                 &second.token,
+                &is_left,
+            )?,
+            signal: CircuitElement::conditionally_select(
+                cs.namespace(|| "chosen signal"),
+                &first.signal,
+                &second.signal,
+                &is_left,
+            )?,
+            signal_audit_path: select_vec_ifeq(
+                cs.namespace(|| "signal_audit_path"),
+                left_side,
+                &cur_side,
+                &first.signal_audit_path,
+                &second.signal_audit_path,
+            )?,
+            obsolete: CircuitElement::conditionally_select(
+                cs.namespace(|| "chosen obsolete"),
+                &first.obsolete,
+                &second.obsolete,
                 &is_left,
             )?,
         })
@@ -3357,23 +3385,58 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
             &is_equal_pubdata,
         )?;
 
-        // nonce enforcement
-        // order in special_nonces: account0, account1, submitter
-        // order in chunks:         account0, recipient1, account1, recipient0, submitter
-        let is_nonce_correct_in_slot = (0..3)
-            .map(|num| {
-                let nonce_correct = CircuitElement::equals(
-                    cs.namespace(|| format!("is_nonce_correct_in_slot {}", num)),
+        let is_nonce_correct_in_slot = vec![
+            {
+                let is_nonce_correct = &[
+                    CircuitElement::equals(
+                        cs.namespace(|| "is nonce correct in slot 0"),
+                        &cur.obsolete,
+                        &op_data.special_nonces[0],
+                    )?,
+                    CircuitElement::equals(
+                        cs.namespace(|| "is signal clear in chunk 0"),
+                        &cur.signal,
+                        &global_variables.explicit_zero,
+                    )?,
+                    is_chunk_number[0].clone(),
+                ];
+                multi_and(
+                    cs.namespace(|| "is nonce correct in chunk 0"),
+                    is_nonce_correct,
+                )?
+            },
+            {
+                let is_nonce_correct = &[
+                    CircuitElement::equals(
+                        cs.namespace(|| "is nonce correct in slot 1"),
+                        &cur.obsolete,
+                        &op_data.special_nonces[1],
+                    )?,
+                    CircuitElement::equals(
+                        cs.namespace(|| "is signal clear in chunk 2"),
+                        &cur.signal,
+                        &global_variables.explicit_zero,
+                    )?,
+                    is_chunk_number[2].clone(),
+                ];
+                multi_and(
+                    cs.namespace(|| "is nonce correct in chunk 2"),
+                    is_nonce_correct,
+                )?
+            },
+            {
+                let is_nonce_correct = CircuitElement::equals(
+                    cs.namespace(|| "is nonce correct in slot 2"),
                     &cur.account.nonce,
-                    &op_data.special_nonces[num],
+                    &op_data.special_nonces[2],
                 )?;
                 Boolean::and(
-                    cs.namespace(|| format!("is nonce is correct in chunk {}", num * 2)),
-                    &nonce_correct,
-                    &is_chunk_number[num * 2],
-                )
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+                    cs.namespace(|| "is nonce correct chunk 4"),
+                    &is_nonce_correct,
+                    &is_chunk_number[4],
+                )?
+            },
+        ];
 
         let is_nonce_correct = multi_or(
             cs.namespace(|| "is_nonce_correct"),
@@ -3729,40 +3792,11 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
             Expression::from(&cur.balance.get_number()) - Expression::from(&actual_b.get_number());
 
         let nonce_inc = Expression::conditionally_select(
-            cs.namespace(|| "nonce increment"),
-            &nonce_inc_0,
-            &nonce_inc_1,
-            &is_first_part,
-        )?;
-
-        let nonce_inc = Expression::conditionally_select(
-            cs.namespace(|| "nonce increment for submitter always 1"),
-            one,
-            Expression::from(&nonce_inc),
+            cs.namespace(|| "increase nonce if last chunk"),
+            one.clone(),
+            zero.clone(),
             &is_chunk_number[4],
         )?;
-
-        let sender_is_submitter = CircuitElement::equals(
-            cs.namespace(|| "is account sender == submitter"),
-            &cur.account_id,
-            &op_data.special_accounts[4],
-        )?;
-
-        // if submitter == account_0 or account_1 then
-        // don't increment nonce for this account
-        let nonce_inc = {
-            let sender_is_submitter_and_not_last_chunk = Boolean::and(
-                cs.namespace(|| "sender == submitter and we are not in the last chunk"),
-                &sender_is_submitter,
-                &is_chunk_number[4].not(),
-            )?;
-            Expression::conditionally_select(
-                cs.namespace(|| "nonce increment is 0 if account == submitter (for account)"),
-                zero,
-                Expression::from(&nonce_inc),
-                &sender_is_submitter_and_not_last_chunk,
-            )?
-        };
 
         let updated_nonce =
             Expression::from(&cur.account.nonce.get_number()) + Expression::from(&nonce_inc);
@@ -3773,6 +3807,30 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
             cs.namespace(|| "update cur nonce"),
             updated_nonce,
             &cur.account.nonce,
+            &lhs_valid,
+        )?;
+
+        let signal = {
+            let inc = Expression::conditionally_select(
+                cs.namespace(|| "signal"),
+                &nonce_inc_0,
+                &nonce_inc_1,
+                &is_first_part,
+            )?;
+            Expression::conditionally_select(
+                cs.namespace(|| "signal if not in last chunk"),
+                zero,
+                &inc,
+                &is_chunk_number[4],
+            )?
+        };
+
+        let updated_signal = Expression::from(&cur.signal.get_number()) + Expression::from(&signal);
+
+        cur.signal = CircuitElement::conditionally_select_with_number_strict(
+            cs.namespace(|| "update cur signal"),
+            updated_signal,
+            &cur.signal,
             &lhs_valid,
         )?;
 
@@ -4420,13 +4478,22 @@ pub fn check_account_data<E: RescueEngine, CS: ConstraintSystem<E>>(
     cur: &AllocatedOperationBranch<E>,
     length_to_root: usize,
     params: &E::Params,
-) -> Result<(AllocatedNum<E>, Boolean, CircuitElement<E>), SynthesisError> {
+) -> Result<
+    (
+        AllocatedNum<E>,
+        Boolean,
+        CircuitElement<E>,
+        CircuitElement<E>,
+    ),
+    SynthesisError,
+> {
     //first we prove calculate root of the subtree to obtain account_leaf_data:
-    let (cur_account_leaf_bits, is_account_empty, subtree_root) = allocate_account_leaf_bits(
-        cs.namespace(|| "allocate current_account_leaf_hash"),
-        cur,
-        params,
-    )?;
+    let (cur_account_leaf_bits, is_account_empty, subtree_root, obsoletes_root) =
+        allocate_account_leaf_bits(
+            cs.namespace(|| "allocate current_account_leaf_hash"),
+            cur,
+            params,
+        )?;
     Ok((
         allocate_merkle_root(
             cs.namespace(|| "account_merkle_root"),
@@ -4438,6 +4505,7 @@ pub fn check_account_data<E: RescueEngine, CS: ConstraintSystem<E>>(
         )?,
         is_account_empty,
         subtree_root,
+        obsoletes_root,
     ))
 }
 
@@ -4446,15 +4514,15 @@ pub fn check_account_data<E: RescueEngine, CS: ConstraintSystem<E>>(
 pub fn calc_account_state_tree_root<E: RescueEngine, CS: ConstraintSystem<E>>(
     mut cs: CS,
     balance_root: &CircuitElement<E>,
+    obsolete_root: &CircuitElement<E>,
     params: &E::Params,
 ) -> Result<CircuitElement<E>, SynthesisError> {
-    let state_tree_root_input = balance_root.get_number();
-    let empty_root_padding =
-        AllocatedNum::zero(cs.namespace(|| "allocate zero element for padding"))?;
+    let balance_tree_root_input = balance_root.get_number();
+    let obsolete_tree_root_input = obsolete_root.get_number();
 
     let mut sponge_output = rescue::rescue_hash(
         cs.namespace(|| "hash state root and balance root"),
-        &[state_tree_root_input, empty_root_padding],
+        &[balance_tree_root_input, obsolete_tree_root_input],
         params,
     )?;
 
@@ -4468,7 +4536,7 @@ pub fn allocate_account_leaf_bits<E: RescueEngine, CS: ConstraintSystem<E>>(
     mut cs: CS,
     branch: &AllocatedOperationBranch<E>,
     params: &E::Params,
-) -> Result<(Vec<Boolean>, Boolean, CircuitElement<E>), SynthesisError> {
+) -> Result<(Vec<Boolean>, Boolean, CircuitElement<E>, CircuitElement<E>), SynthesisError> {
     //first we prove calculate root of the subtree to obtain account_leaf_data:
 
     let balance_data = &branch.balance.get_bits_le();
@@ -4478,6 +4546,16 @@ pub fn allocate_account_leaf_bits<E: RescueEngine, CS: ConstraintSystem<E>>(
         &branch.token.get_bits_le(),
         &branch.balance_audit_path,
         params::balance_tree_depth(),
+        params,
+    )?;
+
+    let signal_data = &branch.signal.get_bits_le();
+    let signal_root = allocate_merkle_root(
+        cs.namespace(|| "signal_subtree_root"),
+        signal_data,
+        &branch.obsolete.get_bits_le(),
+        &branch.signal_audit_path,
+        params::obsolete_tree_depth(),
         params,
     )?;
 
@@ -4516,16 +4594,24 @@ pub fn allocate_account_leaf_bits<E: RescueEngine, CS: ConstraintSystem<E>>(
 
     let balance_subtree_root =
         CircuitElement::from_number(cs.namespace(|| "balance_subtree_root_ce"), balance_root)?;
+    let signal_subtree_root =
+        CircuitElement::from_number(cs.namespace(|| "signal_subtree_root_ce"), signal_root)?;
     let state_tree_root = calc_account_state_tree_root(
         cs.namespace(|| "state_tree_root"),
         &balance_subtree_root,
+        &signal_subtree_root,
         params,
     )?;
 
     // this is safe and just allows the convention.
     account_data.extend(state_tree_root.into_padded_le_bits(params::FR_BIT_WIDTH_PADDED)); // !!!!!
 
-    Ok((account_data, is_account_empty, balance_subtree_root))
+    Ok((
+        account_data,
+        is_account_empty,
+        balance_subtree_root,
+        signal_subtree_root,
+    ))
 }
 
 pub fn allocate_merkle_root<E: RescueEngine, CS: ConstraintSystem<E>>(

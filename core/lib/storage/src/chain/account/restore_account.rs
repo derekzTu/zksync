@@ -3,14 +3,14 @@
 use num::bigint::ToBigInt;
 use zksync_basic_types::Address;
 // Workspace imports
-use zksync_types::PubKeyHash;
-use zksync_types::{Account, AccountId, Nonce, TokenId};
+use zksync_types::{Account, AccountId, Nonce, Obsolete, PubKeyHash, TokenId};
 // Local imports
 use super::records::*;
 
 pub fn restore_account(
     stored_account: &StorageAccount,
     stored_balances: Vec<StorageBalance>,
+    stored_obsoletes: Vec<StorageObsolete>,
 ) -> (AccountId, Account) {
     let mut account = Account::default();
     for b in stored_balances.into_iter() {
@@ -18,6 +18,10 @@ pub fn restore_account(
         let balance_bigint = b.balance.to_bigint().unwrap();
         let balance = balance_bigint.to_biguint().unwrap();
         account.set_balance(TokenId(b.coin_id as u32), balance);
+    }
+    for o in stored_obsoletes.into_iter() {
+        assert_eq!(o.account_id, stored_account.id);
+        account.apply_obsolete(Obsolete::new(Nonce(o.nonce as u32)));
     }
     account.nonce = Nonce(stored_account.nonce as u32);
     account.address = Address::from_slice(&stored_account.address);

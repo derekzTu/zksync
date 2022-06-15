@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 // Workspace uses
 // Local uses
 use crate::{
-    account::{AccountUpdate, PubKeyHash},
+    account::{AccountUpdate, Obsolete, PubKeyHash},
     aggregated_operations::AggregatedActionType,
     AccountId, Nonce, TokenId,
 };
@@ -44,6 +44,7 @@ pub struct AccountEvent {
 pub struct AccountUpdateDetails {
     pub account_id: AccountId,
     pub nonce: Nonce,
+    pub obsolete: Option<Obsolete>,
     pub new_pub_key_hash: Option<PubKeyHash>,
     pub token_id: Option<TokenId>,
     pub new_balance: Option<BigDecimal>,
@@ -58,6 +59,7 @@ impl AccountUpdateDetails {
             AccountUpdate::Create { address: _, nonce } => Some(Self {
                 account_id,
                 nonce,
+                obsolete: None,
                 new_pub_key_hash: None,
                 token_id: None,
                 new_balance: None,
@@ -65,6 +67,7 @@ impl AccountUpdateDetails {
             AccountUpdate::Delete { address: _, nonce } => Some(Self {
                 account_id,
                 nonce,
+                obsolete: None,
                 new_pub_key_hash: None,
                 token_id: None,
                 new_balance: None,
@@ -72,10 +75,12 @@ impl AccountUpdateDetails {
             AccountUpdate::UpdateBalance {
                 old_nonce: _,
                 new_nonce,
+                obsolete,
                 balance_update,
             } => Some(Self {
                 account_id,
                 nonce: new_nonce,
+                obsolete,
                 new_pub_key_hash: None,
                 token_id: Some(balance_update.0),
                 new_balance: Some(BigDecimal::from(BigInt::from(balance_update.2))),
@@ -88,6 +93,7 @@ impl AccountUpdateDetails {
             } => Some(Self {
                 account_id,
                 nonce: new_nonce,
+                obsolete: None,
                 new_pub_key_hash: Some(new_pub_key_hash),
                 token_id: None,
                 new_balance: None,

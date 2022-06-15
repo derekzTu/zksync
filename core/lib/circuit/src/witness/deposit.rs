@@ -159,8 +159,8 @@ impl DepositWitness<Bn256> {
         //preparing data and base witness
         let before_root = tree.root_hash();
         vlog::debug!("deposit Initial root = {}", before_root);
-        let (audit_path_before, audit_balance_path_before) =
-            get_audits(tree, deposit.account_address, deposit.token);
+        let (audit_path_before, audit_balance_path_before, audit_obsolete_path_before) =
+            get_audits(tree, deposit.account_address, deposit.token, 0);
 
         let capacity = tree.capacity();
         assert_eq!(capacity, 1 << account_tree_depth());
@@ -173,42 +173,56 @@ impl DepositWitness<Bn256> {
         let b = Fr::zero();
 
         //applying deposit
-        let (account_witness_before, account_witness_after, balance_before, balance_after) =
-            apply_leaf_operation(
-                tree,
-                deposit.account_address,
-                deposit.token,
-                |acc| {
-                    assert!((acc.address == deposit.address) || (acc.address == Fr::zero()));
-                    acc.address = deposit.address;
-                },
-                |bal| bal.value.add_assign(&amount_as_field_element),
-            );
+        let (
+            account_witness_before,
+            account_witness_after,
+            balance_before,
+            balance_after,
+            obsolete_before,
+            obsolete_after,
+        ) = apply_leaf_operation(
+            tree,
+            deposit.account_address,
+            deposit.token,
+            0,
+            |acc| {
+                assert!((acc.address == deposit.address) || (acc.address == Fr::zero()));
+                acc.address = deposit.address;
+            },
+            |bal| bal.value.add_assign(&amount_as_field_element),
+            |_| {},
+        );
 
         let after_root = tree.root_hash();
         vlog::debug!("deposit After root = {}", after_root);
-        let (audit_path_after, audit_balance_path_after) =
-            get_audits(tree, deposit.account_address, deposit.token);
+        let (audit_path_after, audit_balance_path_after, audit_obsolete_path_after) =
+            get_audits(tree, deposit.account_address, deposit.token, 0);
 
         DepositWitness {
             before: OperationBranch {
                 address: Some(account_address_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_before,
                     account_path: audit_path_before,
                     balance_value: Some(balance_before),
                     balance_subtree_path: audit_balance_path_before,
+                    signal_value: Some(obsolete_before),
+                    signal_subtree_path: audit_obsolete_path_before,
                 },
             },
             after: OperationBranch {
                 address: Some(account_address_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_after,
                     account_path: audit_path_after,
                     balance_value: Some(balance_after),
                     balance_subtree_path: audit_balance_path_after,
+                    signal_value: Some(obsolete_after),
+                    signal_subtree_path: audit_obsolete_path_after,
                 },
             },
             args: OperationArguments {

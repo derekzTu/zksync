@@ -60,7 +60,7 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
-pub use self::account::{Account, AccountUpdate, PubKeyHash};
+pub use self::account::{Account, AccountUpdate, NonceUpdate, Obsolete, PubKeyHash};
 pub use self::block::{ExecutedOperations, ExecutedPriorityOp, ExecutedTx};
 pub use self::fee::{BatchFee, Fee, OutputFeeType, TotalFee};
 pub use self::operations::{

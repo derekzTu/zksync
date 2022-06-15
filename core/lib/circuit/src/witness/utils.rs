@@ -15,7 +15,7 @@ use zksync_crypto::rand::{Rng, SeedableRng, XorShiftRng};
 // Workspace deps
 use zksync_crypto::{
     circuit::{
-        account::{Balance, CircuitAccount, CircuitAccountTree},
+        account::{Balance, CircuitAccount, CircuitAccountTree, Signal},
         utils::{be_bit_vector_into_bytes, le_bit_vector_into_field_element},
     },
     merkle_tree::{hasher::Hasher, RescueHasher},
@@ -78,6 +78,7 @@ pub struct WitnessBuilder<'a> {
     pub fee_account_balances: Option<Vec<Option<Fr>>>,
     pub fee_account_witness: Option<AccountWitness<Engine>>,
     pub fee_account_audit_path: Option<Vec<Option<Fr>>>,
+    pub validator_obsoletes_root: Option<Fr>,
     pub validator_non_processable_tokens_audit_before_fees: Option<Vec<Option<Fr>>>,
     pub validator_non_processable_tokens_audit_after_fees: Option<Vec<Option<Fr>>>,
     pub pubdata_commitment: Option<Fr>,
@@ -107,6 +108,7 @@ impl<'a> WitnessBuilder<'a> {
             fee_account_balances: None,
             fee_account_witness: None,
             fee_account_audit_path: None,
+            validator_obsoletes_root: None,
             validator_non_processable_tokens_audit_before_fees: None,
             validator_non_processable_tokens_audit_after_fees: None,
             pubdata_commitment: None,
@@ -160,6 +162,13 @@ impl<'a> WitnessBuilder<'a> {
         }
         self.fee_account_balances = Some(fee_circuit_account_balances);
 
+        self.validator_obsoletes_root = Some(
+            self.account_tree
+                .get(*self.fee_account_id)
+                .unwrap_or(&CircuitAccount::default())
+                .obsoletes
+                .root_hash(),
+        );
         self.validator_non_processable_tokens_audit_before_fees = Some(
             self.account_tree
                 .get(*self.fee_account_id)
@@ -203,8 +212,8 @@ impl<'a> WitnessBuilder<'a> {
 
     /// After fees collected creates public data commitment
     pub fn calculate_pubdata_commitment(&mut self) {
-        let (fee_account_audit_path, _) =
-            crate::witness::utils::get_audits(&self.account_tree, *self.fee_account_id, 0);
+        let (fee_account_audit_path, _, _) =
+            crate::witness::utils::get_audits(&self.account_tree, *self.fee_account_id, 0, 0);
         self.fee_account_audit_path = Some(fee_account_audit_path);
 
         let public_data_commitment = crate::witness::utils::public_data_commitment::<Engine>(
@@ -246,6 +255,7 @@ impl<'a> WitnessBuilder<'a> {
             validator_audit_path: self
                 .fee_account_audit_path
                 .expect("fee account audit path not present"),
+            validator_obsoletes_root: self.validator_obsoletes_root,
             validator_non_processable_tokens_audit_before_fees: self
                 .validator_non_processable_tokens_audit_before_fees
                 .expect("fee account non processable tokens audit before fees not present"),
@@ -420,7 +430,8 @@ pub fn get_audits(
     tree: &CircuitAccountTree,
     account_address: u32,
     token: u32,
-) -> (Vec<Option<Fr>>, Vec<Option<Fr>>) {
+    obsolete: u32,
+) -> (Vec<Option<Fr>>, Vec<Option<Fr>>, Vec<Option<Fr>>) {
     let default_account = CircuitAccount::default();
     let audit_account: Vec<Option<Fr>> = tree
         .merkle_path(account_address)
@@ -436,16 +447,31 @@ pub fn get_audits(
         .into_iter()
         .map(|e| Some(e.0))
         .collect();
-    (audit_account, audit_balance)
+    let audit_obsolete: Vec<Option<Fr>> = tree
+        .get(account_address)
+        .unwrap_or(&default_account)
+        .obsoletes
+        .merkle_path(obsolete)
+        .into_iter()
+        .map(|e| Some(e.0))
+        .collect();
+    (audit_account, audit_balance, audit_obsolete)
 }
 
-pub fn apply_leaf_operation<Fa: Fn(&mut CircuitAccount<Bn256>), Fb: Fn(&mut Balance<Bn256>)>(
+pub fn apply_leaf_operation<Fa, Fb, Fc>(
     tree: &mut CircuitAccountTree,
     account_address: u32,
     token: u32,
+    obsolete: u32,
     fa: Fa,
     fb: Fb,
-) -> (AccountWitness<Bn256>, AccountWitness<Bn256>, Fr, Fr) {
+    fc: Fc,
+) -> (AccountWitness<Bn256>, AccountWitness<Bn256>, Fr, Fr, Fr, Fr)
+where
+    Fa: Fn(&mut CircuitAccount<Bn256>),
+    Fb: Fn(&mut Balance<Bn256>),
+    Fc: Fn(&mut Signal<Bn256>),
+{
     let default_account = CircuitAccount::default();
 
     //applying deposit
@@ -460,6 +486,12 @@ pub fn apply_leaf_operation<Fa: Fn(&mut CircuitAccount<Bn256>), Fb: Fn(&mut Bala
     let balance_after = balance.value;
     account.subtree.insert(token, balance);
 
+    let mut signal = account.obsoletes.remove(obsolete).unwrap_or_default();
+    let signal_before = signal.value;
+    fc(&mut signal);
+    let signal_after = signal.value;
+    account.obsoletes.insert(obsolete, signal);
+
     fa(&mut account);
 
     let account_witness_after = AccountWitness::from_circuit_account(&account);
@@ -469,6 +501,8 @@ pub fn apply_leaf_operation<Fa: Fn(&mut CircuitAccount<Bn256>), Fb: Fn(&mut Bala
         account_witness_after,
         balance_before,
         balance_after,
+        signal_before,
+        signal_after,
     )
 }
 

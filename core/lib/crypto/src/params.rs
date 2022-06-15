@@ -13,6 +13,8 @@ use crate::{
 pub const ACCOUNT_TREE_DEPTH: usize = 32;
 /// Depth of the balance tree for each account.
 pub const BALANCE_TREE_DEPTH: usize = 32;
+/// Depth of the obsolete tree for each account.
+pub const OBSOLETE_TREE_DEPTH: usize = 32;
 /// Version of transactions.
 pub const CURRENT_TX_VERSION: u8 = 1;
 
@@ -24,6 +26,11 @@ pub fn account_tree_depth() -> usize {
 /// balance tree_depth.
 pub fn balance_tree_depth() -> usize {
     BALANCE_TREE_DEPTH
+}
+
+/// obsolete tree_depth.
+pub fn obsolete_tree_depth() -> usize {
+    OBSOLETE_TREE_DEPTH
 }
 
 /// Tokens settings
@@ -111,6 +118,7 @@ pub const INPUT_DATA_ROOT_HASH_BYTES_WIDTH: usize = 32;
 
 pub const LEGACY_TOKEN_BIT_WIDTH: usize = 16;
 pub const TOKEN_BIT_WIDTH: usize = 32;
+pub const OBSOLETE_BIT_WIDTH: usize = 32;
 pub const TX_TYPE_BIT_WIDTH: usize = 8;
 
 pub const TX_VERSION_FOR_SIGNATURE_BIT_WIDTH: usize = 8;

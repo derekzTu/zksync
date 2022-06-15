@@ -38,6 +38,7 @@ fn to_existing() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: from_account.nonce,
                     new_nonce: from_account.nonce + 1,
+                    obsolete: None,
                     balance_update: (token_id, &amount + &fee, BigUint::zero()),
                 },
             ),
@@ -46,6 +47,7 @@ fn to_existing() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: to_account.nonce,
                     new_nonce: to_account.nonce,
+                    obsolete: None,
                     balance_update: (token_id, BigUint::zero(), amount),
                 },
             ),
@@ -126,6 +128,7 @@ fn to_new() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: account.nonce,
                     new_nonce: account.nonce + 1,
+                    obsolete: None,
                     balance_update: (token_id, &amount + &fee, BigUint::zero()),
                 },
             ),
@@ -134,6 +137,7 @@ fn to_new() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (token_id, BigUint::zero(), amount),
                 },
             ),
@@ -204,6 +208,7 @@ fn to_self() {
             AccountUpdate::UpdateBalance {
                 old_nonce: account.nonce,
                 new_nonce: account.nonce + 1,
+                obsolete: None,
                 balance_update: (token_id, &amount + &fee, amount),
             },
         )],
@@ -364,6 +369,7 @@ fn execute_txs_batch_success_transfers() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: account.nonce,
                     new_nonce: account.nonce + 1,
+                    obsolete: None,
                     balance_update: (token_id, balance_from, balance_from_after_first.clone()),
                 },
             ),
@@ -372,6 +378,7 @@ fn execute_txs_batch_success_transfers() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (token_id, balance_to, balance_to_after_first.clone()),
                 },
             ),
@@ -380,6 +387,7 @@ fn execute_txs_batch_success_transfers() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: account.nonce + 1,
                     new_nonce: account.nonce + 2,
+                    obsolete: None,
                     balance_update: (token_id, balance_from_after_first, balance_from_final),
                 },
             ),
@@ -388,6 +396,7 @@ fn execute_txs_batch_success_transfers() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (token_id, balance_to_after_first, balance_to_final),
                 },
             ),

@@ -82,6 +82,7 @@ pub fn gen_acc_random_updates<R: Rng>(
             AccountUpdate::UpdateBalance {
                 old_nonce: old_nonce + 1,
                 new_nonce: old_nonce + 2,
+                obsolete: None,
                 balance_update: (TokenId(0), old_balance, new_balance),
             },
         ),
@@ -118,6 +119,7 @@ pub fn generate_nft<R: Rng>(
             AccountUpdate::UpdateBalance {
                 old_nonce: account.nonce,
                 new_nonce: account.nonce,
+                obsolete: None,
                 balance_update: (
                     TokenId(MIN_NFT_TOKEN_ID + number),
                     BigUint::zero(),

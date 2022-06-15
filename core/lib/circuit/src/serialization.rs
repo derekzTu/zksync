@@ -40,6 +40,8 @@ pub struct ProverData {
     pub operations: Vec<Operation<Engine>>,
     #[serde(with = "AccountWitnessDef")]
     pub validator_account: AccountWitness<Engine>,
+    #[serde(with = "FrSerde")]
+    pub validator_obsolete_root: Fr,
     #[serde(with = "VecOptionalFrSerde")]
     pub validator_non_processable_tokens_audit_before_fees: Vec<Option<Fr>>,
     #[serde(with = "VecOptionalFrSerde")]
@@ -63,6 +65,7 @@ impl From<WitnessBuilder<'_>> for ProverData {
             validator_balances: witness_builder.fee_account_balances.unwrap(),
             validator_audit_path: witness_builder.fee_account_audit_path.unwrap(),
             validator_account: witness_builder.fee_account_witness.unwrap(),
+            validator_obsolete_root: witness_builder.validator_obsoletes_root.unwrap(),
             validator_non_processable_tokens_audit_before_fees: witness_builder
                 .validator_non_processable_tokens_audit_before_fees
                 .unwrap(),
@@ -88,6 +91,7 @@ impl ProverData {
             validator_balances: self.validator_balances,
             validator_audit_path: self.validator_audit_path,
             validator_account: self.validator_account,
+            validator_obsoletes_root: Some(self.validator_obsolete_root),
             validator_non_processable_tokens_audit_before_fees: self
                 .validator_non_processable_tokens_audit_before_fees,
             validator_non_processable_tokens_audit_after_fees: self
@@ -191,6 +195,8 @@ pub struct OperationBranchDef {
     pub address: Option<Fr>,
     #[serde(with = "OptionalFrSerde")]
     pub token: Option<Fr>,
+    #[serde(with = "OptionalFrSerde")]
+    pub obsolete: Option<Fr>,
     #[serde(with = "OperationBranchWitnessDef")]
     pub witness: OperationBranchWitness<Engine>,
 }
@@ -206,6 +212,10 @@ pub struct OperationBranchWitnessDef {
     pub balance_value: Option<Fr>,
     #[serde(with = "VecOptionalFrSerde")]
     pub balance_subtree_path: Vec<Option<Fr>>,
+    #[serde(with = "OptionalFrSerde")]
+    pub signal_value: Option<Fr>,
+    #[serde(with = "VecOptionalFrSerde")]
+    pub signal_subtree_path: Vec<Option<Fr>>,
 }
 
 pub struct VecOperationsSerde;

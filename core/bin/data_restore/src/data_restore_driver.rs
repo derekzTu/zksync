@@ -206,6 +206,7 @@ impl<T: Transport> DataRestoreDriver<T> {
             AccountUpdate::UpdateBalance {
                 old_nonce: special_account.nonce,
                 new_nonce: special_account.nonce,
+                obsolete: None,
                 balance_update: (
                     NFT_TOKEN_ID,
                     num::BigUint::from(0u64),

@@ -166,8 +166,8 @@ impl WithdrawWitness<Bn256> {
         //preparing data and base witness
         let before_root = tree.root_hash();
         vlog::debug!("Initial root = {}", before_root);
-        let (audit_path_before, audit_balance_path_before) =
-            get_audits(tree, withdraw.account_address, withdraw.token);
+        let (audit_path_before, audit_balance_path_before, audit_obsolete_path_before) =
+            get_audits(tree, withdraw.account_address, withdraw.token, 0);
 
         let capacity = tree.capacity();
         assert_eq!(capacity, 1 << account_tree_depth());
@@ -201,24 +201,32 @@ impl WithdrawWitness<Bn256> {
 
         //applying withdraw
 
-        let (account_witness_before, account_witness_after, balance_before, balance_after) =
-            apply_leaf_operation(
-                tree,
-                withdraw.account_address,
-                withdraw.token,
-                |acc| {
-                    acc.nonce.add_assign(&fr_from(1));
-                },
-                |bal| {
-                    bal.value.sub_assign(&amount_as_field_element);
-                    bal.value.sub_assign(&fee_as_field_element);
-                },
-            );
+        let (
+            account_witness_before,
+            account_witness_after,
+            balance_before,
+            balance_after,
+            obsolete_before,
+            obsolete_after,
+        ) = apply_leaf_operation(
+            tree,
+            withdraw.account_address,
+            withdraw.token,
+            0,
+            |acc| {
+                acc.nonce.add_assign(&fr_from(1));
+            },
+            |bal| {
+                bal.value.sub_assign(&amount_as_field_element);
+                bal.value.sub_assign(&fee_as_field_element);
+            },
+            |_| {},
+        );
 
         let after_root = tree.root_hash();
         vlog::debug!("After root = {}", after_root);
-        let (audit_path_after, audit_balance_path_after) =
-            get_audits(tree, withdraw.account_address, withdraw.token);
+        let (audit_path_after, audit_balance_path_after, audit_obsolete_path_after) =
+            get_audits(tree, withdraw.account_address, withdraw.token, 0);
 
         let a = balance_before;
         let mut b = amount_as_field_element;
@@ -228,21 +236,27 @@ impl WithdrawWitness<Bn256> {
             before: OperationBranch {
                 address: Some(account_address_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_before,
                     account_path: audit_path_before,
                     balance_value: Some(balance_before),
                     balance_subtree_path: audit_balance_path_before,
+                    signal_value: Some(obsolete_before),
+                    signal_subtree_path: audit_obsolete_path_before,
                 },
             },
             after: OperationBranch {
                 address: Some(account_address_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_after,
                     account_path: audit_path_after,
                     balance_value: Some(balance_after),
                     balance_subtree_path: audit_balance_path_after,
+                    signal_value: Some(obsolete_after),
+                    signal_subtree_path: audit_obsolete_path_after,
                 },
             },
             args: OperationArguments {

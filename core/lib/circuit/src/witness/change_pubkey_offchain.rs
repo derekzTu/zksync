@@ -155,10 +155,11 @@ impl ChangePubkeyOffChainWitness<Bn256> {
         //preparing data and base witness
         let before_root = tree.root_hash();
         vlog::debug!("Initial root = {}", before_root);
-        let (audit_path_before, audit_balance_path_before) = get_audits(
+        let (audit_path_before, audit_balance_path_before, audit_obsolete_path_before) = get_audits(
             tree,
             change_pubkey_offcahin.account_id,
             change_pubkey_offcahin.fee_token,
+            0,
         );
 
         let capacity = tree.capacity();
@@ -178,23 +179,31 @@ impl ChangePubkeyOffChainWitness<Bn256> {
         let fee_encoded: Fr = le_bit_vector_into_field_element(&fee_bits);
 
         //applying deposit
-        let (account_witness_before, account_witness_after, balance_before, balance_after) =
-            apply_leaf_operation(
-                tree,
-                change_pubkey_offcahin.account_id,
-                change_pubkey_offcahin.fee_token,
-                |acc| {
-                    assert_eq!(
-                        acc.address, change_pubkey_offcahin.address,
-                        "change pubkey address tx mismatch"
-                    );
-                    acc.pub_key_hash = change_pubkey_offcahin.new_pubkey_hash;
-                    acc.nonce.add_assign(&fr_from(1));
-                },
-                |bal| {
-                    bal.value.sub_assign(&fee_as_field_element);
-                },
-            );
+        let (
+            account_witness_before,
+            account_witness_after,
+            balance_before,
+            balance_after,
+            obsolete_before,
+            obsolete_after,
+        ) = apply_leaf_operation(
+            tree,
+            change_pubkey_offcahin.account_id,
+            change_pubkey_offcahin.fee_token,
+            0,
+            |acc| {
+                assert_eq!(
+                    acc.address, change_pubkey_offcahin.address,
+                    "change pubkey address tx mismatch"
+                );
+                acc.pub_key_hash = change_pubkey_offcahin.new_pubkey_hash;
+                acc.nonce.add_assign(&fr_from(1));
+            },
+            |bal| {
+                bal.value.sub_assign(&fee_as_field_element);
+            },
+            |_| {},
+        );
 
         //calculate a and b
         let a = balance_before;
@@ -202,31 +211,38 @@ impl ChangePubkeyOffChainWitness<Bn256> {
 
         let after_root = tree.root_hash();
         vlog::debug!("After root = {}", after_root);
-        let (audit_path_after, audit_balance_path_after) = get_audits(
+        let (audit_path_after, audit_balance_path_after, audit_obsolete_path_after) = get_audits(
             tree,
             change_pubkey_offcahin.account_id,
             change_pubkey_offcahin.fee_token,
+            0,
         );
 
         ChangePubkeyOffChainWitness {
             before: OperationBranch {
                 address: Some(account_id_fe),
                 token: Some(fee_token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_before,
                     account_path: audit_path_before,
                     balance_value: Some(balance_before),
                     balance_subtree_path: audit_balance_path_before,
+                    signal_value: Some(obsolete_before),
+                    signal_subtree_path: audit_obsolete_path_before,
                 },
             },
             after: OperationBranch {
                 address: Some(account_id_fe),
                 token: Some(fee_token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_after,
                     account_path: audit_path_after,
                     balance_value: Some(balance_after),
                     balance_subtree_path: audit_balance_path_after,
+                    signal_value: Some(obsolete_after),
+                    signal_subtree_path: audit_obsolete_path_after,
                 },
             },
             args: OperationArguments {

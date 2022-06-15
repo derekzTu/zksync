@@ -29,6 +29,7 @@ fn deposit_to_existing() {
             AccountUpdate::UpdateBalance {
                 old_nonce: account.nonce,
                 new_nonce: account.nonce,
+                obsolete: None,
                 balance_update: (token, BigUint::zero(), BigUint::from(100u32)),
             },
         )],
@@ -66,6 +67,7 @@ fn deposit_to_new() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (token, BigUint::zero(), BigUint::from(100u32)),
                 },
             ),
@@ -113,6 +115,7 @@ fn full_exit_success() {
             AccountUpdate::UpdateBalance {
                 old_nonce: account.nonce,
                 new_nonce: account.nonce,
+                obsolete: None,
                 balance_update: (token, amount, BigUint::zero()),
             },
         )],

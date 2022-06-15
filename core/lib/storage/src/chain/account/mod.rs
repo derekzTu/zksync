@@ -324,8 +324,19 @@ impl<'a, 'c> AccountSchema<'a, 'c> {
             .fetch_all(&mut transaction)
             .await?;
 
+            let obsoletes = sqlx::query_as!(
+                StorageObsolete,
+                "
+                    SELECT * FROM obsoletes
+                    WHERE account_id = $1
+                ",
+                i64::from(*account_id)
+            )
+            .fetch_all(&mut transaction)
+            .await?;
+
             let last_block = account.last_block;
-            let (_, mut account) = restore_account(&account, balances);
+            let (_, mut account) = restore_account(&account, balances, obsoletes);
             let nfts: Vec<StorageNFT> = sqlx::query_as!(
                 StorageNFT,
                 "

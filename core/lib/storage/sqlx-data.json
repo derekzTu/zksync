@@ -42,6 +42,32 @@
       ]
     }
   },
+  "030fc81f7098512ca067b21282160ce8783b55debefa2bccd29ae2910689933c": {
+    "query": "SELECT * FROM obsoletes WHERE account_id = ANY($1)",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "account_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "nonce",
+          "type_info": "Int8"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8Array"
+        ]
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "052bc740befe43cd3d8d915371cb055187d4ff4ebf019fe12c8dc85b296acc47": {
     "query": "SELECT tx_hash, tx FROM executed_transactions WHERE block_number BETWEEN $1 AND $2",
     "describe": {
@@ -374,6 +400,16 @@
           "ordinal": 8,
           "name": "update_order_id",
           "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "obsolete",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 10,
+          "name": "reset",
+          "type_info": "Bool"
         }
       ],
       "parameters": {
@@ -391,6 +427,8 @@
         false,
         false,
         false,
+        false,
+        true,
         false
       ]
     }
@@ -673,6 +711,16 @@
           "ordinal": 8,
           "name": "update_order_id",
           "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "obsolete",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 10,
+          "name": "reset",
+          "type_info": "Bool"
         }
       ],
       "parameters": {
@@ -690,6 +738,8 @@
         false,
         false,
         false,
+        false,
+        true,
         false
       ]
     }
@@ -1157,8 +1207,8 @@
       "nullable": []
     }
   },
-  "23610c64c6b48f1527f90d4ea0426a8c37ca436d0c811d890759cfb6330f70a9": {
-    "query": "\n                        INSERT INTO account_balance_updates ( account_id, block_number, coin_id, old_balance, new_balance, old_nonce, new_nonce, update_order_id )\n                        VALUES ( $1, $2, $3, $4, $5, $6, $7, $8 )\n                        ",
+  "675e8a12b42d8ebb3e0792890774ee6743dabbec2a66abaec124a63d0594a19b": {
+    "query": "\n                        INSERT INTO account_balance_updates ( account_id, block_number, coin_id, old_balance, new_balance, old_nonce, new_nonce, obsolete, reset, update_order_id )\n                        VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )\n                        ",
     "describe": {
       "columns": [],
       "parameters": {
@@ -1170,6 +1220,8 @@
           "Numeric",
           "Int8",
           "Int8",
+          "Int8",
+          "Bool",
           "Int4"
         ]
       },
@@ -1476,6 +1528,19 @@
       "nullable": [
         null
       ]
+    }
+  },
+  "2aa5796dff8ff6103e21099f193ba2b268faaf31c5f1172378cadd99b50f053e": {
+    "query": "\n                            INSERT INTO obsoletes ( account_id, nonce )\n                            VALUES ( $1, $2 )\n                            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "2bcf6c683a83017bebbf7bb596f33596dbf87710c2410ded2b3ffbbaf6df6552": {
@@ -3324,6 +3389,32 @@
       ]
     }
   },
+  "7c7bc08328f2fb10de7d0a5d0ebb489012b0630a1d748825f9601b9bf54289fd": {
+    "query": "\n                    SELECT * FROM obsoletes\n                    WHERE account_id = $1\n                ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "account_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "nonce",
+          "type_info": "Int8"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8"
+        ]
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "7c897b16e4a3ae8c80c3d165d010c0698d0256ebadcfac6ca1a173bf820a1c5e": {
     "query": "SELECT eth_signature FROM txs_batches_signatures\n                    WHERE batch_id = $1",
     "describe": {
@@ -3888,6 +3979,19 @@
         false,
         false
       ]
+    }
+  },
+  "8bc3cd957991de64ccadc46f8ea8c5b42980684dde12d5ced34da15a332aea5e": {
+    "query": "\n                            DELETE FROM obsoletes\n                            WHERE account_id = $1 AND nonce = $2\n                            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8"
+        ]
+      },
+      "nullable": []
     }
   },
   "8c2b6d94cb84616a33ecfb94be7153b3d760b456fa24af058076a69a6f4f204c": {
@@ -7581,6 +7685,16 @@
           "ordinal": 8,
           "name": "update_order_id",
           "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "obsolete",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 10,
+          "name": "reset",
+          "type_info": "Bool"
         }
       ],
       "parameters": {
@@ -7597,6 +7711,8 @@
         false,
         false,
         false,
+        false,
+        true,
         false
       ]
     }

@@ -120,6 +120,7 @@ impl TxHandler<ChangePubKey> for ZkSyncState {
                 balance_update: (op.tx.fee_token, old_balance, new_balance),
                 old_nonce: new_nonce,
                 new_nonce,
+                obsolete: None,
             },
         ));
 

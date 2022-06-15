@@ -158,6 +158,7 @@ impl TxHandler<ForcedExit> for ZkSyncState {
                 balance_update: (op.tx.token, initiator_old_balance, initiator_new_balance),
                 old_nonce: initiator_old_nonce,
                 new_nonce: initiator_new_nonce,
+                obsolete: None,
             },
         ));
 
@@ -167,6 +168,7 @@ impl TxHandler<ForcedExit> for ZkSyncState {
                 balance_update: (op.tx.token, target_old_balance, target_new_balance),
                 old_nonce: target_nonce,
                 new_nonce: target_nonce,
+                obsolete: None,
             },
         ));
 

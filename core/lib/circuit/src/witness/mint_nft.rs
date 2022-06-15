@@ -234,53 +234,73 @@ impl MintNFTWitness<Bn256> {
         vlog::debug!("Initial root = {}", before_first_chunk_root);
 
         // applying first chunk: take fee from creator, increment nonce
-        let (audit_creator_account_before_first_chunk, audit_creator_balance_before_first_chunk) =
-            get_audits(tree, mint_nft.creator_account_id, mint_nft.fee_token);
+        let (
+            audit_creator_account_before_first_chunk,
+            audit_creator_balance_before_first_chunk,
+            audit_creator_obsolete_before_first_chunk,
+        ) = get_audits(tree, mint_nft.creator_account_id, mint_nft.fee_token, 0);
 
         let (
             creator_account_witness_before_first_chunk,
             _creator_account_witness_after_first_chunk,
             fee_balance_before_first_chunk,
             _fee_balance_after_first_chunk,
+            creator_obsolete_before_first_chunk,
+            _creator_obsolete_after_first_chunk,
         ) = apply_leaf_operation(
             tree,
             mint_nft.creator_account_id,
             mint_nft.fee_token,
+            0,
             |acc| {
                 acc.nonce.add_assign(&Fr::from_str("1").unwrap());
             },
             |bal| {
                 bal.value.sub_assign(&fee_as_field_element);
             },
+            |_| {},
         );
 
-        let (_audit_creator_account_after_first_chunk, _audit_creator_balance_after_first_chunk) =
-            get_audits(tree, mint_nft.creator_account_id, mint_nft.fee_token);
+        let (
+            _audit_creator_account_after_first_chunk,
+            _audit_creator_balance_after_first_chunk,
+            _audit_creator_obsolete_after_first_chunk,
+        ) = get_audits(tree, mint_nft.creator_account_id, mint_nft.fee_token, 0);
 
         let before_second_chunk_root = tree.root_hash();
         vlog::debug!("Before second chunk root = {}", before_second_chunk_root);
 
         // applying second chunk: change the counter of the creator == serial_id
-        let (audit_creator_account_before_second_chunk, audit_creator_balance_before_second_chunk) =
-            get_audits(tree, mint_nft.creator_account_id, NFT_TOKEN_ID.0);
+        let (
+            audit_creator_account_before_second_chunk,
+            audit_creator_balance_before_second_chunk,
+            audit_creator_obsolete_before_second_chunk,
+        ) = get_audits(tree, mint_nft.creator_account_id, NFT_TOKEN_ID.0, 0);
 
         let (
             creator_account_witness_before_second_chunk,
             _creator_account_witness_after_second_chunk,
             serial_id_before_second_chunk,
             _serial_id_after_second_chunk,
+            creator_obsolete_before_second_chunk,
+            _creator_obsolete_after_second_chunk,
         ) = apply_leaf_operation(
             tree,
             mint_nft.creator_account_id,
             NFT_TOKEN_ID.0,
+            0,
             |_| {},
             |bal| {
                 bal.value.add_assign(&Fr::from_str("1").unwrap());
             },
+            |_| {},
         );
 
-        let (_audit_creator_account_after_second_chunk, _audit_creator_balance_after_second_chunk) =
-            get_audits(tree, mint_nft.creator_account_id, NFT_TOKEN_ID.0);
+        let (
+            _audit_creator_account_after_second_chunk,
+            _audit_creator_balance_after_second_chunk,
+            _audit_creator_obsolete_after_second_chunk,
+        ) = get_audits(tree, mint_nft.creator_account_id, NFT_TOKEN_ID.0, 0);
 
         let serial_id = serial_id_before_second_chunk;
         let serial_id_u32: u32 = fr_into_u32_low(serial_id);
@@ -289,26 +309,36 @@ impl MintNFTWitness<Bn256> {
         vlog::debug!("Before third chunk root = {}", before_third_chunk_root);
 
         // applying third chunk: change the counter of the special account == new_token_id
-        let (audit_special_account_before_third_chunk, audit_special_balance_before_third_chunk) =
-            get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, NFT_TOKEN_ID.0);
+        let (
+            audit_special_account_before_third_chunk,
+            audit_special_balance_before_third_chunk,
+            audit_special_obsolete_before_third_chunk,
+        ) = get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, NFT_TOKEN_ID.0, 0);
 
         let (
             special_account_witness_before_third_chunk,
             _special_account_witness_after_third_chunk,
             nft_counter_before_third_chunk,
             _nft_counter_after_third_chunk,
+            special_obsolete_before_third_chunk,
+            _special_obsolete_after_third_chunk,
         ) = apply_leaf_operation(
             tree,
             NFT_STORAGE_ACCOUNT_ID.0,
             NFT_TOKEN_ID.0,
+            0,
             |_| {},
             |bal| {
                 bal.value.add_assign(&Fr::from_str("1").unwrap());
             },
+            |_| {},
         );
 
-        let (_audit_special_account_after_third_chunk, _audit_special_balance_after_third_chunk) =
-            get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, NFT_TOKEN_ID.0);
+        let (
+            _audit_special_account_after_third_chunk,
+            _audit_special_balance_after_third_chunk,
+            _audit_special_obsolete_after_third_chunk,
+        ) = get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, NFT_TOKEN_ID.0, 0);
 
         let new_token_id = nft_counter_before_third_chunk;
         let new_token_id_u32: u32 = fr_into_u32_low(new_token_id);
@@ -318,8 +348,11 @@ impl MintNFTWitness<Bn256> {
         vlog::debug!("Before fourth chunk root = {}", before_fourth_chunk_root);
 
         // applying fourth chunk: store the content in the special account
-        let (audit_special_account_before_fourth_chunk, audit_special_balance_before_fourth_chunk) =
-            get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, new_token_id_u32);
+        let (
+            audit_special_account_before_fourth_chunk,
+            audit_special_balance_before_fourth_chunk,
+            audit_special_obsolete_before_fourth_chunk,
+        ) = get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, new_token_id_u32, 0);
 
         fn content_to_store_as_balance(
             creator_account_id: u32,
@@ -361,18 +394,25 @@ impl MintNFTWitness<Bn256> {
             _special_account_witness_after_fourth_chunk,
             special_account_content_before_fourth_chunk,
             _special_account_content_after_fourth_chunk,
+            special_obsolete_before_fourth_chunk,
+            _special_obsolete_after_fourth_chunk,
         ) = apply_leaf_operation(
             tree,
             NFT_STORAGE_ACCOUNT_ID.0,
             new_token_id_u32,
+            0,
             |_| {},
             |bal| {
                 bal.value.add_assign(&content_to_store);
             },
+            |_| {},
         );
 
-        let (_audit_special_account_after_fourth_chunk, _audit_special_balance_after_fourth_chunk) =
-            get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, new_token_id_u32);
+        let (
+            _audit_special_account_after_fourth_chunk,
+            _audit_special_balance_after_fourth_chunk,
+            _audit_special_obsolete_after_fourth_chunk,
+        ) = get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, new_token_id_u32, 0);
 
         let before_fifth_chunk_root = tree.root_hash();
         vlog::debug!("Before fifth chunk root = {}", before_fifth_chunk_root);
@@ -381,28 +421,34 @@ impl MintNFTWitness<Bn256> {
         let (
             audit_recipient_account_before_fifth_chunk,
             audit_recipient_balance_before_fifth_chunk,
-        ) = get_audits(tree, mint_nft.recipient_account_id, new_token_id_u32);
+            audit_recipient_obsolete_before_fifth_chunk,
+        ) = get_audits(tree, mint_nft.recipient_account_id, new_token_id_u32, 0);
 
         let (
             recipient_account_witness_before_fifth_chunk,
             _recipient_account_witness_after_fifth_chunk,
             recipient_account_balance_before_fifth_chunk,
             _recipient_account_balance_after_fifth_chunk,
+            recipient_account_obsolete_before_fifth_chunk,
+            _recipient_account_obsolete_after_fifth_chunk,
         ) = apply_leaf_operation(
             tree,
             mint_nft.recipient_account_id,
             new_token_id_u32,
+            0,
             |_| {},
             |bal| {
                 bal.value.add_assign(&Fr::from_str("1").unwrap());
             },
+            |_| {},
         );
         assert_eq!(recipient_account_balance_before_fifth_chunk, Fr::zero());
 
         let (
             _audit_recipient_account_after_fifth_chunk,
             _audit_recipient_balance_after_fifth_chunk,
-        ) = get_audits(tree, mint_nft.recipient_account_id, new_token_id_u32);
+            _audit_recipient_obsolete_after_fifth_chunk,
+        ) = get_audits(tree, mint_nft.recipient_account_id, new_token_id_u32, 0);
 
         let after_root = tree.root_hash();
         vlog::debug!("After root = {}", after_root);
@@ -464,51 +510,66 @@ impl MintNFTWitness<Bn256> {
             creator_before_first_chunk: OperationBranch {
                 address: Some(creator_account_id_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: creator_account_witness_before_first_chunk,
                     account_path: audit_creator_account_before_first_chunk,
                     balance_value: Some(fee_balance_before_first_chunk),
                     balance_subtree_path: audit_creator_balance_before_first_chunk,
+                    signal_value: Some(creator_obsolete_before_first_chunk),
+                    signal_subtree_path: audit_creator_obsolete_before_first_chunk,
                 },
             },
             creator_before_second_chunk: OperationBranch {
                 address: Some(creator_account_id_fe),
                 token: Some(Fr::from_str(&NFT_TOKEN_ID.0.to_string()).unwrap()),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: creator_account_witness_before_second_chunk,
                     account_path: audit_creator_account_before_second_chunk,
                     balance_value: Some(serial_id_before_second_chunk),
                     balance_subtree_path: audit_creator_balance_before_second_chunk,
+                    signal_value: Some(creator_obsolete_before_second_chunk),
+                    signal_subtree_path: audit_creator_obsolete_before_second_chunk,
                 },
             },
             special_account_before_third_chunk: OperationBranch {
                 address: Some(fr_from(&NFT_STORAGE_ACCOUNT_ID.0)),
                 token: Some(Fr::from_str(&NFT_TOKEN_ID.0.to_string()).unwrap()),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: special_account_witness_before_third_chunk,
                     account_path: audit_special_account_before_third_chunk,
                     balance_value: Some(nft_counter_before_third_chunk),
                     balance_subtree_path: audit_special_balance_before_third_chunk,
+                    signal_value: Some(special_obsolete_before_third_chunk),
+                    signal_subtree_path: audit_special_obsolete_before_third_chunk,
                 },
             },
             special_account_before_fourth_chunk: OperationBranch {
                 address: Some(fr_from(&NFT_STORAGE_ACCOUNT_ID.0)),
                 token: Some(new_token_id),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: special_account_witness_before_fourth_chunk,
                     account_path: audit_special_account_before_fourth_chunk,
                     balance_value: Some(special_account_content_before_fourth_chunk),
                     balance_subtree_path: audit_special_balance_before_fourth_chunk,
+                    signal_value: Some(special_obsolete_before_fourth_chunk),
+                    signal_subtree_path: audit_special_obsolete_before_fourth_chunk,
                 },
             },
             recipient_account_before_fifth_chunk: OperationBranch {
                 address: Some(recipient_account_id_fe),
                 token: Some(new_token_id),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: recipient_account_witness_before_fifth_chunk,
                     account_path: audit_recipient_account_before_fifth_chunk,
                     balance_value: Some(recipient_account_balance_before_fifth_chunk),
                     balance_subtree_path: audit_recipient_balance_before_fifth_chunk,
+                    signal_value: Some(recipient_account_obsolete_before_fifth_chunk),
+                    signal_subtree_path: audit_recipient_obsolete_before_fifth_chunk,
                 },
             },
         }

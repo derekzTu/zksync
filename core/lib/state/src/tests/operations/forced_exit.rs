@@ -36,6 +36,7 @@ fn success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: initiator_account.nonce,
                     new_nonce: initiator_account.nonce + 1,
+                    obsolete: None,
                     balance_update: (token_id, fee, BigUint::zero()),
                 },
             ),
@@ -44,6 +45,7 @@ fn success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: target_account.nonce,
                     new_nonce: target_account.nonce,
+                    obsolete: None,
                     balance_update: (token_id, amount, BigUint::zero()),
                 },
             ),

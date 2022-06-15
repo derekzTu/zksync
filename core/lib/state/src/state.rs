@@ -6,7 +6,7 @@ use zksync_types::{
     helpers::reverse_updates,
     operations::{TransferOp, TransferToNewOp, ZkSyncOp},
     Account, AccountId, AccountMap, AccountTree, AccountUpdate, AccountUpdates, Address,
-    BlockNumber, SignedZkSyncTx, TokenId, ZkSyncPriorityOp, ZkSyncTx, NFT,
+    BlockNumber, NonceUpdate, SignedZkSyncTx, TokenId, ZkSyncPriorityOp, ZkSyncTx, NFT,
 };
 
 use crate::{
@@ -155,12 +155,12 @@ impl ZkSyncState {
         account
     }
 
-    pub fn update_account(
+    pub fn update_account<T: Into<NonceUpdate>>(
         &mut self,
         account_id: AccountId,
         token: TokenId,
         update: BalanceUpdate,
-        nonce_update: u32,
+        nonce_update: T,
     ) -> (AccountId, AccountUpdate) {
         let mut account = self.get_account(account_id).unwrap();
         let old_balance = account.get_balance(token);
@@ -170,10 +170,12 @@ impl ZkSyncState {
             BalanceUpdate::Sub(amount) => account.sub_balance(token, &amount),
         }
 
+        let (nonce_update, obsolete) = nonce_update.into().into();
         let new_balance = account.get_balance(token);
         let old_nonce = account.nonce;
         *account.nonce += nonce_update;
         let new_nonce = account.nonce;
+        account.apply_obsolete(obsolete);
         self.insert_account(account_id, account);
 
         (
@@ -182,6 +184,7 @@ impl ZkSyncState {
                 balance_update: (token, old_balance, new_balance),
                 old_nonce,
                 new_nonce,
+                obsolete,
             },
         )
     }
@@ -259,6 +262,7 @@ impl ZkSyncState {
                 AccountUpdate::UpdateBalance {
                     old_nonce,
                     new_nonce,
+                    obsolete,
                     balance_update: (token_id, old_balance, new_balance),
                 } => {
                     let mut account = self
@@ -269,6 +273,7 @@ impl ZkSyncState {
 
                     account.set_balance(token_id, new_balance.clone());
                     account.nonce = new_nonce;
+                    account.apply_obsolete(obsolete);
                     self.insert_account(account_id, account);
                 }
                 AccountUpdate::ChangePubKeyHash {
@@ -381,6 +386,7 @@ impl ZkSyncState {
                     balance_update: (fee.token, old_amount, new_amount),
                     old_nonce: nonce,
                     new_nonce: nonce,
+                    obsolete: None,
                 },
             ));
         }
@@ -468,6 +474,7 @@ impl ZkSyncState {
                 AccountUpdate::UpdateBalance {
                     old_nonce,
                     new_nonce,
+                    obsolete,
                     balance_update,
                 } => {
                     let mut account = self
@@ -484,6 +491,7 @@ impl ZkSyncState {
                     );
                     account.nonce = *new_nonce;
                     account.set_balance(*token_id, new_amount.clone());
+                    account.apply_obsolete(*obsolete);
 
                     self.insert_account(*account_id, account);
                 }
@@ -685,6 +693,7 @@ mod tests {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(1),
+                    obsolete: None,
                     balance_update: (TokenId(0), 100u32.into(), 50u32.into()),
                 },
             ),
@@ -693,6 +702,7 @@ mod tests {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(1),
                     new_nonce: Nonce(2),
+                    obsolete: None,
                     balance_update: (TokenId(0), 50u32.into(), 0u32.into()),
                 },
             ),
@@ -736,6 +746,7 @@ mod tests {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(1),
+                    obsolete: None,
                     balance_update: (TokenId(0), 0u32.into(), 100u32.into()),
                 },
             ),
@@ -744,6 +755,7 @@ mod tests {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(1),
+                    obsolete: None,
                     balance_update: (TokenId(0), 100u32.into(), 200u32.into()),
                 },
             ),
@@ -771,6 +783,7 @@ mod tests {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(1),
+                    obsolete: None,
                     balance_update: (TokenId(0), 0u32.into(), 100u32.into()),
                 },
             ),
@@ -779,6 +792,7 @@ mod tests {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(1),
                     new_nonce: Nonce(2),
+                    obsolete: None,
                     balance_update: (TokenId(0), 0u32.into(), 200u32.into()),
                 },
             ),
@@ -863,6 +877,7 @@ mod tests {
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(0),
                 new_nonce: Nonce(1),
+                obsolete: None,
                 balance_update: (token_id, 0u32.into(), 100u32.into()),
             },
         )];
@@ -952,6 +967,7 @@ mod tests {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(1),
+                    obsolete: None,
                     balance_update: (token_id, 0u32.into(), 256u32.into()),
                 },
             ),

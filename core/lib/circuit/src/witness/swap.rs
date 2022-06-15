@@ -339,6 +339,8 @@ impl SwapWitness<Bn256> {
         let (special_amount_0_fe, special_amount_0_packed) = pack_amount(swap.orders.0.amount);
         let (special_amount_1_fe, special_amount_1_packed) = pack_amount(swap.orders.1.amount);
         let fee_fe = fr_from(swap.fee);
+        let nonce_0_fe = fr_from(swap.orders.0.nonce);
+        let nonce_1_fe = fr_from(swap.orders.1.nonce);
 
         let fee_bits = FloatConversions::to_float(
             swap.fee,
@@ -367,78 +369,130 @@ impl SwapWitness<Bn256> {
         .map(|x| Some(fr_from(x)))
         .collect();
 
-        lhs_paths.push(get_audits(tree, swap.orders.0.account, swap.tokens.0));
-        rhs_paths.push(get_audits(tree, swap.orders.1.recipient, swap.tokens.0));
+        lhs_paths.push(get_audits(
+            tree,
+            swap.orders.0.account,
+            swap.tokens.0,
+            swap.orders.0.nonce,
+        ));
+        rhs_paths.push(get_audits(
+            tree,
+            swap.orders.1.recipient,
+            swap.tokens.0,
+            swap.orders.1.nonce,
+        ));
 
         witnesses.push(apply_leaf_operation(
             tree,
             swap.orders.0.account,
             swap.tokens.0,
-            |acc| {
-                if swap.orders.0.account == swap.submitter {
-                    return;
-                }
-                acc.nonce.add_assign(&nonce_increment(&special_amount_0_fe));
-            },
+            swap.orders.0.nonce,
+            |_| {},
             |bal| {
                 bal.value.sub_assign(&amount_0_fe);
+            },
+            |s| {
+                if special_amount_0_fe.is_zero() {
+                    return;
+                }
+
+                s.raise();
             },
         ));
 
         roots.push(tree.root_hash());
-        lhs_paths.push(get_audits(tree, swap.orders.0.account, swap.tokens.0));
-        rhs_paths.push(get_audits(tree, swap.orders.1.recipient, swap.tokens.0));
+        lhs_paths.push(get_audits(
+            tree,
+            swap.orders.0.account,
+            swap.tokens.0,
+            swap.orders.0.nonce,
+        ));
+        rhs_paths.push(get_audits(
+            tree,
+            swap.orders.1.recipient,
+            swap.tokens.0,
+            swap.orders.1.nonce,
+        ));
 
         witnesses.push(apply_leaf_operation(
             tree,
             swap.orders.1.recipient,
             swap.tokens.0,
+            swap.orders.1.nonce,
             |_| {},
             |bal| bal.value.add_assign(&amount_0_fe),
+            |_| {},
         ));
 
         roots.push(tree.root_hash());
-        lhs_paths.push(get_audits(tree, swap.orders.1.account, swap.tokens.1));
-        rhs_paths.push(get_audits(tree, swap.orders.0.recipient, swap.tokens.1));
+        lhs_paths.push(get_audits(
+            tree,
+            swap.orders.1.account,
+            swap.tokens.1,
+            swap.orders.1.nonce,
+        ));
+        rhs_paths.push(get_audits(
+            tree,
+            swap.orders.0.recipient,
+            swap.tokens.1,
+            swap.orders.0.nonce,
+        ));
 
         witnesses.push(apply_leaf_operation(
             tree,
             swap.orders.1.account,
             swap.tokens.1,
-            |acc| {
-                if swap.orders.1.account == swap.submitter {
-                    return;
-                }
-                acc.nonce.add_assign(&nonce_increment(&special_amount_1_fe));
-            },
+            swap.orders.1.nonce,
+            |_| {},
             |bal| {
                 bal.value.sub_assign(&amount_1_fe);
+            },
+            |s| {
+                if special_amount_1_fe.is_zero() {
+                    return;
+                }
+
+                s.raise();
             },
         ));
 
         roots.push(tree.root_hash());
-        lhs_paths.push(get_audits(tree, swap.orders.1.account, swap.tokens.1));
-        rhs_paths.push(get_audits(tree, swap.orders.0.recipient, swap.tokens.1));
+        lhs_paths.push(get_audits(
+            tree,
+            swap.orders.1.account,
+            swap.tokens.1,
+            swap.orders.1.nonce,
+        ));
+        rhs_paths.push(get_audits(
+            tree,
+            swap.orders.0.recipient,
+            swap.tokens.1,
+            swap.orders.0.nonce,
+        ));
 
         witnesses.push(apply_leaf_operation(
             tree,
             swap.orders.0.recipient,
             swap.tokens.1,
+            swap.orders.0.nonce,
             |_| {},
             |bal| bal.value.add_assign(&amount_1_fe),
+            |_| {},
         ));
 
         roots.push(tree.root_hash());
-        lhs_paths.push(get_audits(tree, swap.submitter, swap.fee_token));
+        lhs_paths.push(get_audits(tree, swap.submitter, swap.fee_token, 0));
 
         witnesses.push(apply_leaf_operation(
             tree,
             swap.submitter,
             swap.fee_token,
+            0,
             |acc| {
                 acc.nonce.add_assign(&Fr::one());
             },
             |bal| bal.value.sub_assign(&fee_fe),
+            |_| {},
         ));
 
         roots.push(tree.root_hash());
@@ -455,21 +509,27 @@ impl SwapWitness<Bn256> {
                     OperationBranch {
                         address: Some(account_0_fe),
                         token: Some(token_0_fe),
+                        obsolete: Some(nonce_0_fe),
                         witness: OperationBranchWitness {
                             account_witness: witnesses[0].0.clone(),
                             balance_value: Some(witnesses[0].2),
+                            signal_value: Some(witnesses[0].4),
                             account_path: lhs_paths[0].0.clone(),
                             balance_subtree_path: lhs_paths[0].1.clone(),
+                            signal_subtree_path: lhs_paths[0].2.clone(),
                         },
                     },
                     OperationBranch {
                         address: Some(account_0_fe),
                         token: Some(token_0_fe),
+                        obsolete: Some(nonce_0_fe),
                         witness: OperationBranchWitness {
                             account_witness: witnesses[0].1.clone(),
                             balance_value: Some(witnesses[0].3),
+                            signal_value: Some(witnesses[0].5),
                             account_path: lhs_paths[1].0.clone(),
                             balance_subtree_path: lhs_paths[1].1.clone(),
+                            signal_subtree_path: lhs_paths[1].2.clone(),
                         },
                     },
                 ],
@@ -477,21 +537,27 @@ impl SwapWitness<Bn256> {
                     OperationBranch {
                         address: Some(account_1_fe),
                         token: Some(token_1_fe),
+                        obsolete: Some(nonce_1_fe),
                         witness: OperationBranchWitness {
                             account_witness: witnesses[2].0.clone(),
                             balance_value: Some(witnesses[2].2),
+                            signal_value: Some(witnesses[2].4),
                             account_path: lhs_paths[2].0.clone(),
                             balance_subtree_path: lhs_paths[2].1.clone(),
+                            signal_subtree_path: lhs_paths[2].2.clone(),
                         },
                     },
                     OperationBranch {
                         address: Some(account_1_fe),
                         token: Some(token_1_fe),
+                        obsolete: Some(nonce_1_fe),
                         witness: OperationBranchWitness {
                             account_witness: witnesses[2].1.clone(),
                             balance_value: Some(witnesses[2].3),
+                            signal_value: Some(witnesses[2].5),
                             account_path: lhs_paths[3].0.clone(),
                             balance_subtree_path: lhs_paths[3].1.clone(),
+                            signal_subtree_path: lhs_paths[3].2.clone(),
                         },
                     },
                 ],
@@ -501,21 +567,27 @@ impl SwapWitness<Bn256> {
                     OperationBranch {
                         address: Some(recipient_1_fe),
                         token: Some(token_0_fe),
+                        obsolete: Some(nonce_1_fe),
                         witness: OperationBranchWitness {
                             account_witness: witnesses[1].0.clone(),
                             balance_value: Some(witnesses[1].2),
+                            signal_value: Some(witnesses[1].4),
                             account_path: rhs_paths[0].0.clone(),
                             balance_subtree_path: rhs_paths[0].1.clone(),
+                            signal_subtree_path: rhs_paths[0].2.clone(),
                         },
                     },
                     OperationBranch {
                         address: Some(recipient_1_fe),
                         token: Some(token_0_fe),
+                        obsolete: Some(nonce_1_fe),
                         witness: OperationBranchWitness {
                             account_witness: witnesses[1].0.clone(),
                             balance_value: Some(witnesses[1].2),
+                            signal_value: Some(witnesses[1].4),
                             account_path: rhs_paths[1].0.clone(),
                             balance_subtree_path: rhs_paths[1].1.clone(),
+                            signal_subtree_path: rhs_paths[1].2.clone(),
                         },
                     },
                 ],
@@ -523,21 +595,27 @@ impl SwapWitness<Bn256> {
                     OperationBranch {
                         address: Some(recipient_0_fe),
                         token: Some(token_1_fe),
+                        obsolete: Some(nonce_0_fe),
                         witness: OperationBranchWitness {
                             account_witness: witnesses[3].0.clone(),
                             balance_value: Some(witnesses[3].2),
+                            signal_value: Some(witnesses[3].4),
                             account_path: rhs_paths[2].0.clone(),
                             balance_subtree_path: rhs_paths[2].1.clone(),
+                            signal_subtree_path: rhs_paths[2].2.clone(),
                         },
                     },
                     OperationBranch {
                         address: Some(recipient_0_fe),
                         token: Some(token_1_fe),
+                        obsolete: Some(nonce_0_fe),
                         witness: OperationBranchWitness {
                             account_witness: witnesses[3].0.clone(),
                             balance_value: Some(witnesses[3].2),
+                            signal_value: Some(witnesses[3].4),
                             account_path: rhs_paths[3].0.clone(),
                             balance_subtree_path: rhs_paths[3].1.clone(),
+                            signal_subtree_path: rhs_paths[3].2.clone(),
                         },
                     },
                 ],
@@ -545,11 +623,14 @@ impl SwapWitness<Bn256> {
             submitter: OperationBranch {
                 address: Some(submitter_fe),
                 token: Some(fee_token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: witnesses[4].0.clone(),
                     balance_value: Some(witnesses[4].2),
+                    signal_value: Some(witnesses[4].4),
                     account_path: lhs_paths[4].0.clone(),
                     balance_subtree_path: lhs_paths[4].1.clone(),
+                    signal_subtree_path: lhs_paths[4].2.clone(),
                 },
             },
             args: OperationArguments {

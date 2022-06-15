@@ -1,4 +1,4 @@
-use crate::account::PubKeyHash;
+use crate::account::{Obsolete, PubKeyHash};
 use crate::Engine;
 use crate::{
     helpers::{
@@ -164,6 +164,14 @@ impl Order {
             return Err(TransactionSignatureError);
         }
         Ok(tx)
+    }
+
+    pub fn obsolete(&self) -> Option<Obsolete> {
+        if !self.amount.is_zero() {
+            Option::from(Obsolete::new(self.nonce))
+        } else {
+            None
+        }
     }
 }
 

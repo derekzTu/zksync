@@ -143,6 +143,7 @@ impl ZkSyncState {
                 balance_update: (op.tx.token, from_old_balance, from_new_balance),
                 old_nonce: from_old_nonce,
                 new_nonce: from_new_nonce,
+                obsolete: None,
             },
         ));
 
@@ -152,6 +153,7 @@ impl ZkSyncState {
                 balance_update: (op.tx.token, to_old_balance, to_new_balance),
                 old_nonce: to_account_nonce,
                 new_nonce: to_account_nonce,
+                obsolete: None,
             },
         ));
 
@@ -202,6 +204,7 @@ impl ZkSyncState {
                 balance_update: (op.tx.token, old_balance, new_balance),
                 old_nonce,
                 new_nonce,
+                obsolete: None,
             },
         ));
 
@@ -274,6 +277,7 @@ impl ZkSyncState {
                 balance_update: (op.tx.token, from_old_balance, from_new_balance),
                 old_nonce: from_old_nonce,
                 new_nonce: from_new_nonce,
+                obsolete: None,
             },
         ));
         updates.push((
@@ -282,6 +286,7 @@ impl ZkSyncState {
                 balance_update: (op.tx.token, to_old_balance, to_new_balance),
                 old_nonce: to_account_nonce,
                 new_nonce: to_account_nonce,
+                obsolete: None,
             },
         ));
 

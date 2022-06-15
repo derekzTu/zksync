@@ -115,6 +115,7 @@ impl TxHandler<WithdrawNFT> for ZkSyncState {
                 balance_update: (op.tx.token, from_old_balance, from_new_balance),
                 old_nonce: from_old_nonce,
                 new_nonce: from_new_nonce,
+                obsolete: None,
             },
         ));
 
@@ -133,6 +134,7 @@ impl TxHandler<WithdrawNFT> for ZkSyncState {
                 balance_update: (op.tx.fee_token, from_old_balance, from_new_balance),
                 old_nonce: from_new_nonce,
                 new_nonce: from_new_nonce,
+                obsolete: None,
             },
         ));
 

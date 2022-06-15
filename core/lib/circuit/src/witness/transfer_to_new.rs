@@ -190,17 +190,24 @@ impl TransferToNewWitness<Bn256> {
         //preparing data and base witness
         let before_root = tree.root_hash();
         vlog::debug!("Initial root = {}", before_root);
-        let (audit_path_from_before, audit_balance_path_from_before) = get_audits(
+        let (
+            audit_path_from_before,
+            audit_balance_path_from_before,
+            audit_obsolete_path_from_before,
+        ) = get_audits(
             tree,
             transfer_to_new.from_account_address,
             transfer_to_new.token,
+            0,
         );
 
-        let (audit_path_to_before, audit_balance_path_to_before) = get_audits(
-            tree,
-            transfer_to_new.to_account_address,
-            transfer_to_new.token,
-        );
+        let (audit_path_to_before, audit_balance_path_to_before, audit_obsolete_path_to_before) =
+            get_audits(
+                tree,
+                transfer_to_new.to_account_address,
+                transfer_to_new.token,
+                0,
+            );
 
         let capacity = tree.capacity();
         assert_eq!(capacity, 1 << account_tree_depth());
@@ -244,10 +251,13 @@ impl TransferToNewWitness<Bn256> {
             account_witness_from_intermediate,
             balance_from_before,
             balance_from_intermediate,
+            obsolete_from_before,
+            obsolete_from_intermediate,
         ) = apply_leaf_operation(
             tree,
             transfer_to_new.from_account_address,
             transfer_to_new.token,
+            0,
             |acc| {
                 acc.nonce.add_assign(&fr_from(1));
             },
@@ -255,21 +265,32 @@ impl TransferToNewWitness<Bn256> {
                 bal.value.sub_assign(&amount_as_field_element);
                 bal.value.sub_assign(&fee_as_field_element)
             },
+            |_| {},
         );
 
         let intermediate_root = tree.root_hash();
         vlog::debug!("Intermediate root = {}", intermediate_root);
 
-        let (audit_path_from_intermediate, audit_balance_path_from_intermediate) = get_audits(
+        let (
+            audit_path_from_intermediate,
+            audit_balance_path_from_intermediate,
+            audit_obsolete_path_from_intermediate,
+        ) = get_audits(
             tree,
             transfer_to_new.from_account_address,
             transfer_to_new.token,
+            0,
         );
 
-        let (audit_path_to_intermediate, audit_balance_path_to_intermediate) = get_audits(
+        let (
+            audit_path_to_intermediate,
+            audit_balance_path_to_intermediate,
+            audit_obsolete_path_to_intermediate,
+        ) = get_audits(
             tree,
             transfer_to_new.to_account_address,
             transfer_to_new.token,
+            0,
         );
 
         let (
@@ -277,28 +298,36 @@ impl TransferToNewWitness<Bn256> {
             account_witness_to_after,
             balance_to_intermediate,
             balance_to_after,
+            oboslete_to_intermediate,
+            obsolete_to_after,
         ) = apply_leaf_operation(
             tree,
             transfer_to_new.to_account_address,
             transfer_to_new.token,
+            0,
             |acc| {
                 assert!((acc.address == Fr::zero()));
                 acc.address = transfer_to_new.new_address;
             },
             |bal| bal.value.add_assign(&amount_as_field_element),
+            |_| {},
         );
         let after_root = tree.root_hash();
-        let (audit_path_from_after, audit_balance_path_from_after) = get_audits(
-            tree,
-            transfer_to_new.from_account_address,
-            transfer_to_new.token,
-        );
+        let (audit_path_from_after, audit_balance_path_from_after, audit_obsolete_path_from_after) =
+            get_audits(
+                tree,
+                transfer_to_new.from_account_address,
+                transfer_to_new.token,
+                0,
+            );
 
-        let (audit_path_to_after, audit_balance_path_to_after) = get_audits(
-            tree,
-            transfer_to_new.to_account_address,
-            transfer_to_new.token,
-        );
+        let (audit_path_to_after, audit_balance_path_to_after, audit_obsolete_path_to_after) =
+            get_audits(
+                tree,
+                transfer_to_new.to_account_address,
+                transfer_to_new.token,
+                0,
+            );
 
         //calculate a and b
         let a = balance_from_before;
@@ -308,61 +337,79 @@ impl TransferToNewWitness<Bn256> {
             from_before: OperationBranch {
                 address: Some(account_address_from_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_from_before,
                     account_path: audit_path_from_before,
                     balance_value: Some(balance_from_before),
                     balance_subtree_path: audit_balance_path_from_before,
+                    signal_value: Some(obsolete_from_before),
+                    signal_subtree_path: audit_obsolete_path_from_before,
                 },
             },
             from_intermediate: OperationBranch {
                 address: Some(account_address_from_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_from_intermediate.clone(),
                     account_path: audit_path_from_intermediate,
                     balance_value: Some(balance_from_intermediate),
                     balance_subtree_path: audit_balance_path_from_intermediate,
+                    signal_value: Some(obsolete_from_intermediate),
+                    signal_subtree_path: audit_obsolete_path_from_intermediate,
                 },
             },
             from_after: OperationBranch {
                 address: Some(account_address_from_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_from_intermediate,
                     account_path: audit_path_from_after,
                     balance_value: Some(balance_from_intermediate),
                     balance_subtree_path: audit_balance_path_from_after,
+                    signal_value: Some(obsolete_from_intermediate),
+                    signal_subtree_path: audit_obsolete_path_from_after,
                 },
             },
             to_before: OperationBranch {
                 address: Some(account_address_to_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_to_intermediate.clone(),
                     account_path: audit_path_to_before,
                     balance_value: Some(balance_to_intermediate),
                     balance_subtree_path: audit_balance_path_to_before,
+                    signal_value: Some(oboslete_to_intermediate),
+                    signal_subtree_path: audit_obsolete_path_to_before,
                 },
             },
             to_intermediate: OperationBranch {
                 address: Some(account_address_to_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_to_intermediate,
                     account_path: audit_path_to_intermediate,
                     balance_value: Some(balance_to_intermediate),
                     balance_subtree_path: audit_balance_path_to_intermediate,
+                    signal_value: Some(oboslete_to_intermediate),
+                    signal_subtree_path: audit_obsolete_path_to_intermediate,
                 },
             },
             to_after: OperationBranch {
                 address: Some(account_address_to_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_to_after,
                     account_path: audit_path_to_after,
                     balance_value: Some(balance_to_after),
                     balance_subtree_path: audit_balance_path_to_after,
+                    signal_value: Some(obsolete_to_after),
+                    signal_subtree_path: audit_obsolete_path_to_after,
                 },
             },
             args: OperationArguments {

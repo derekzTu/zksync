@@ -46,6 +46,7 @@ fn success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: account.nonce + 1,
                     new_nonce: account.nonce + 1,
+                    obsolete: None,
                     balance_update: (token_id, balance.into(), 0u32.into()),
                 },
             ),

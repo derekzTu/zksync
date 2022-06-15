@@ -236,8 +236,8 @@ impl FullExitWitness<Bn256> {
         //preparing data and base witness
         let before_root = tree.root_hash();
         vlog::debug!("Initial root = {}", before_root);
-        let (audit_path_before, audit_balance_path_before) =
-            get_audits(tree, full_exit.account_address, full_exit.token);
+        let (audit_path_before, audit_balance_path_before, audit_obsolete_path_before) =
+            get_audits(tree, full_exit.account_address, full_exit.token, 0);
 
         let capacity = tree.capacity();
         assert_eq!(capacity, 1 << account_tree_depth());
@@ -246,22 +246,33 @@ impl FullExitWitness<Bn256> {
         let account_address_fe = fr_from(full_exit.account_address);
         let token_fe = fr_from(full_exit.token);
 
-        let (account_witness_before, account_witness_after, balance_before, balance_after) = {
+        let (
+            account_witness_before,
+            account_witness_after,
+            balance_before,
+            balance_after,
+            obsolete_before,
+            obsolete_after,
+        ) = {
             if is_success {
                 apply_leaf_operation(
                     tree,
                     full_exit.account_address,
                     full_exit.token,
+                    0,
                     |_| {},
                     |bal| {
                         bal.value = Fr::zero();
                     },
+                    |_| {},
                 )
             } else {
                 apply_leaf_operation(
                     tree,
                     full_exit.account_address,
                     full_exit.token,
+                    0,
+                    |_| {},
                     |_| {},
                     |_| {},
                 )
@@ -270,35 +281,43 @@ impl FullExitWitness<Bn256> {
 
         let after_root = tree.root_hash();
         vlog::debug!("After root = {}", after_root);
-        let (audit_path_after, audit_balance_path_after) =
-            get_audits(tree, full_exit.account_address, full_exit.token);
+        let (audit_path_after, audit_balance_path_after, audit_obsolete_path_after) =
+            get_audits(tree, full_exit.account_address, full_exit.token, 0);
 
-        let (audit_special_account, audit_balance_special_account) =
-            get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, full_exit.token);
+        let (audit_special_account, audit_balance_special_account, audit_obsolete_special_account) =
+            get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, full_exit.token, 0);
         let (
             special_account_witness,
             _special_account_witness,
             special_account_balance,
             _special_account_balance,
+            special_account_obsolete,
+            _special_account_obsolete,
         ) = apply_leaf_operation(
             tree,
             NFT_STORAGE_ACCOUNT_ID.0,
             full_exit.token,
+            0,
+            |_| {},
             |_| {},
             |_| {},
         );
 
-        let (audit_creator_account, audit_balance_creator_account) =
-            get_audits(tree, full_exit.creator_account_id, full_exit.token);
+        let (audit_creator_account, audit_balance_creator_account, audit_obsolete_creator_account) =
+            get_audits(tree, full_exit.creator_account_id, full_exit.token, 0);
         let (
             creator_account_witness,
             _creator_account_witness,
             creator_account_balance,
             _creator_account_balance,
+            creator_account_obsolete,
+            _creator_account_obsolete,
         ) = apply_leaf_operation(
             tree,
             full_exit.creator_account_id,
             full_exit.token,
+            0,
+            |_| {},
             |_| {},
             |_| {},
         );
@@ -325,41 +344,53 @@ impl FullExitWitness<Bn256> {
             before: OperationBranch {
                 address: Some(account_address_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_before,
                     account_path: audit_path_before,
                     balance_value: Some(balance_before),
                     balance_subtree_path: audit_balance_path_before,
+                    signal_value: Some(obsolete_before),
+                    signal_subtree_path: audit_obsolete_path_before,
                 },
             },
             after: OperationBranch {
                 address: Some(account_address_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_after,
                     account_path: audit_path_after,
                     balance_value: Some(balance_after),
                     balance_subtree_path: audit_balance_path_after,
+                    signal_value: Some(obsolete_after),
+                    signal_subtree_path: audit_obsolete_path_after,
                 },
             },
             special_account_second_chunk: OperationBranch {
                 address: Some(fr_from(&NFT_STORAGE_ACCOUNT_ID.0)),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: special_account_witness,
                     account_path: audit_special_account,
                     balance_value: Some(special_account_balance),
                     balance_subtree_path: audit_balance_special_account,
+                    signal_value: Some(special_account_obsolete),
+                    signal_subtree_path: audit_obsolete_special_account,
                 },
             },
             creator_account_third_chunk: OperationBranch {
                 address: Some(creator_account_id_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: creator_account_witness,
                     account_path: audit_creator_account,
                     balance_value: Some(creator_account_balance),
                     balance_subtree_path: audit_balance_creator_account,
+                    signal_value: Some(creator_account_obsolete),
+                    signal_subtree_path: audit_obsolete_creator_account,
                 },
             },
             args: OperationArguments {

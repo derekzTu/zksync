@@ -106,6 +106,7 @@ impl TxHandler<FullExit> for ZkSyncState {
                 balance_update: (op.priority_op.token, old_balance, new_balance),
                 old_nonce,
                 new_nonce,
+                obsolete: None,
             },
         ));
 

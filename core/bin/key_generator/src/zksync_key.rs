@@ -54,6 +54,7 @@ fn exit_circuit() -> impl Circuit<Engine> + Clone {
     let empty_branch = OperationBranch {
         address: None,
         token: None,
+        obsolete: None,
         witness: OperationBranchWitness {
             account_witness: AccountWitness {
                 nonce: None,
@@ -63,6 +64,8 @@ fn exit_circuit() -> impl Circuit<Engine> + Clone {
             account_path: vec![None; params::account_tree_depth()],
             balance_value: None,
             balance_subtree_path: vec![None; params::balance_tree_depth()],
+            signal_value: None,
+            signal_subtree_path: vec![None; params::obsolete_tree_depth()],
         },
     };
     ZkSyncExitCircuit::<'_, Engine> {
@@ -116,6 +119,7 @@ fn zksync_circuit(block_chunks: usize) -> impl Circuit<Engine> + Clone {
         lhs: OperationBranch {
             address: None,
             token: None,
+            obsolete: None,
             witness: OperationBranchWitness {
                 account_witness: AccountWitness {
                     nonce: None,
@@ -125,11 +129,14 @@ fn zksync_circuit(block_chunks: usize) -> impl Circuit<Engine> + Clone {
                 account_path: vec![None; params::account_tree_depth()],
                 balance_value: None,
                 balance_subtree_path: vec![None; params::balance_tree_depth()],
+                signal_value: None,
+                signal_subtree_path: vec![None; params::obsolete_tree_depth()],
             },
         },
         rhs: OperationBranch {
             address: None,
             token: None,
+            obsolete: None,
             witness: OperationBranchWitness {
                 account_witness: AccountWitness {
                     nonce: None,
@@ -139,6 +146,8 @@ fn zksync_circuit(block_chunks: usize) -> impl Circuit<Engine> + Clone {
                 account_path: vec![None; params::account_tree_depth()],
                 balance_value: None,
                 balance_subtree_path: vec![None; params::balance_tree_depth()],
+                signal_value: None,
+                signal_subtree_path: vec![None; params::obsolete_tree_depth()],
             },
         },
     };
@@ -154,6 +163,7 @@ fn zksync_circuit(block_chunks: usize) -> impl Circuit<Engine> + Clone {
         pub_data_commitment: None,
         validator_balances: vec![None; params::number_of_processable_tokens()],
         validator_audit_path: vec![None; params::account_tree_depth()],
+        validator_obsoletes_root: None,
         validator_non_processable_tokens_audit_before_fees: vec![
             None;
             params::balance_tree_depth()

@@ -31,12 +31,16 @@ pub fn noop_operation(tree: &CircuitAccountTree, acc_id: u32) -> Operation<Bn256
         None => Fr::zero(),
         Some(bal) => bal.value,
     };
+    let obsolete_value = match acc.obsoletes.get(0) {
+        None => Fr::zero(),
+        Some(sig) => sig.value,
+    };
     let pubdata = vec![false; CHUNK_BIT_WIDTH];
     let pubdata_chunks: Vec<_> = pubdata
         .chunks(CHUNK_BIT_WIDTH)
         .map(|x| le_bit_vector_into_field_element(&x.to_vec()))
         .collect();
-    let (audit_account, audit_balance) = get_audits(tree, acc_id, 0);
+    let (audit_account, audit_balance, audit_obsolete) = get_audits(tree, acc_id, 0, 0);
 
     Operation {
         new_root: Some(tree.root_hash()),
@@ -54,6 +58,7 @@ pub fn noop_operation(tree: &CircuitAccountTree, acc_id: u32) -> Operation<Bn256
         lhs: OperationBranch {
             address: Some(account_address_fe),
             token: Some(token_fe),
+            obsolete: Some(Fr::zero()),
             witness: OperationBranchWitness {
                 account_witness: AccountWitness {
                     nonce: Some(acc.nonce),
@@ -63,11 +68,14 @@ pub fn noop_operation(tree: &CircuitAccountTree, acc_id: u32) -> Operation<Bn256
                 account_path: audit_account.clone(),
                 balance_value: Some(balance_value),
                 balance_subtree_path: audit_balance.clone(),
+                signal_value: Some(obsolete_value),
+                signal_subtree_path: audit_obsolete.clone(),
             },
         },
         rhs: OperationBranch {
             address: Some(account_address_fe),
             token: Some(token_fe),
+            obsolete: Some(Fr::zero()),
             witness: OperationBranchWitness {
                 account_witness: AccountWitness {
                     nonce: Some(acc.nonce),
@@ -77,6 +85,8 @@ pub fn noop_operation(tree: &CircuitAccountTree, acc_id: u32) -> Operation<Bn256
                 account_path: audit_account,
                 balance_value: Some(balance_value),
                 balance_subtree_path: audit_balance,
+                signal_value: Some(obsolete_value),
+                signal_subtree_path: audit_obsolete,
             },
         },
     }

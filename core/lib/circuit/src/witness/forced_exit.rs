@@ -199,14 +199,27 @@ impl ForcedExitWitness<Bn256> {
         //preparing data and base witness
         let before_root = tree.root_hash();
         vlog::debug!("Initial root = {}", before_root);
-        let (audit_path_initiator_before, audit_balance_path_initiator_before) = get_audits(
+        let (
+            audit_path_initiator_before,
+            audit_balance_path_initiator_before,
+            audit_obsolete_path_initiator_before,
+        ) = get_audits(
             tree,
             forced_exit.initiator_account_address,
             forced_exit.token,
+            0,
         );
 
-        let (audit_path_target_before, audit_balance_path_target_before) =
-            get_audits(tree, forced_exit.target_account_address, forced_exit.token);
+        let (
+            audit_path_target_before,
+            audit_balance_path_target_before,
+            audit_obsolete_path_target_before,
+        ) = get_audits(
+            tree,
+            forced_exit.target_account_address,
+            forced_exit.token,
+            0,
+        );
 
         let capacity = tree.capacity();
         assert_eq!(capacity, 1 << account_tree_depth());
@@ -243,50 +256,83 @@ impl ForcedExitWitness<Bn256> {
             account_witness_initiator_intermediate,
             balance_initiator_before,
             balance_initiator_intermediate,
+            obsolete_initiator_before,
+            obsolete_initiator_intermediate,
         ) = apply_leaf_operation(
             tree,
             forced_exit.initiator_account_address,
             forced_exit.token,
+            0,
             |acc| {
                 acc.nonce.add_assign(&fr_from(1));
             },
             |bal| bal.value.sub_assign(&fee_as_field_element),
+            |_| {},
         );
 
         let intermediate_root = tree.root_hash();
         vlog::debug!("Intermediate root = {}", intermediate_root);
 
-        let (audit_path_initiator_intermediate, audit_balance_path_initiator_intermediate) =
-            get_audits(
-                tree,
-                forced_exit.initiator_account_address,
-                forced_exit.token,
-            );
+        let (
+            audit_path_initiator_intermediate,
+            audit_balance_path_initiator_intermediate,
+            audit_obsolete_path_initiator_intermediate,
+        ) = get_audits(
+            tree,
+            forced_exit.initiator_account_address,
+            forced_exit.token,
+            0,
+        );
 
-        let (audit_path_target_intermediate, audit_balance_path_target_intermediate) =
-            get_audits(tree, forced_exit.target_account_address, forced_exit.token);
+        let (
+            audit_path_target_intermediate,
+            audit_balance_path_target_intermediate,
+            audit_obsolete_path_target_intermediate,
+        ) = get_audits(
+            tree,
+            forced_exit.target_account_address,
+            forced_exit.token,
+            0,
+        );
 
         let (
             account_witness_target_intermediate,
             account_witness_target_after,
             balance_target_intermediate,
             balance_target_after,
+            obsolete_target_intermediate,
+            obsolete_target_after,
         ) = apply_leaf_operation(
             tree,
             forced_exit.target_account_address,
             forced_exit.token,
+            0,
             |_| {},
             |bal| bal.value.sub_assign(&amount_as_field_element),
+            |_| {},
         );
         let after_root = tree.root_hash();
-        let (audit_path_initiator_after, audit_balance_path_initiator_after) = get_audits(
+        let (
+            audit_path_initiator_after,
+            audit_balance_path_initiator_after,
+            audit_obsolete_path_initiator_after,
+        ) = get_audits(
             tree,
             forced_exit.initiator_account_address,
             forced_exit.token,
+            0,
         );
 
-        let (audit_path_target_after, audit_balance_path_target_after) =
-            get_audits(tree, forced_exit.target_account_address, forced_exit.token);
+        let (
+            audit_path_target_after,
+            audit_balance_path_target_after,
+            audit_obsolete_path_target_after,
+        ) = get_audits(
+            tree,
+            forced_exit.target_account_address,
+            forced_exit.token,
+            0,
+        );
 
         //calculate a and b
         let a = balance_initiator_before;
@@ -296,61 +342,79 @@ impl ForcedExitWitness<Bn256> {
             initiator_before: OperationBranch {
                 address: Some(account_address_initiator_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_initiator_before,
                     account_path: audit_path_initiator_before,
                     balance_value: Some(balance_initiator_before),
                     balance_subtree_path: audit_balance_path_initiator_before,
+                    signal_value: Some(obsolete_initiator_before),
+                    signal_subtree_path: audit_obsolete_path_initiator_before,
                 },
             },
             initiator_intermediate: OperationBranch {
                 address: Some(account_address_initiator_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_initiator_intermediate.clone(),
                     account_path: audit_path_initiator_intermediate,
                     balance_value: Some(balance_initiator_intermediate),
                     balance_subtree_path: audit_balance_path_initiator_intermediate,
+                    signal_value: Some(obsolete_initiator_intermediate),
+                    signal_subtree_path: audit_obsolete_path_initiator_intermediate,
                 },
             },
             initiator_after: OperationBranch {
                 address: Some(account_address_initiator_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_initiator_intermediate,
                     account_path: audit_path_initiator_after,
                     balance_value: Some(balance_initiator_intermediate),
                     balance_subtree_path: audit_balance_path_initiator_after,
+                    signal_value: Some(obsolete_initiator_intermediate),
+                    signal_subtree_path: audit_obsolete_path_initiator_after,
                 },
             },
             target_before: OperationBranch {
                 address: Some(account_address_target_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_target_intermediate.clone(),
                     account_path: audit_path_target_before,
                     balance_value: Some(balance_target_intermediate),
                     balance_subtree_path: audit_balance_path_target_before,
+                    signal_value: Some(obsolete_target_intermediate),
+                    signal_subtree_path: audit_obsolete_path_target_before,
                 },
             },
             target_intermediate: OperationBranch {
                 address: Some(account_address_target_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_target_intermediate,
                     account_path: audit_path_target_intermediate,
                     balance_value: Some(balance_target_intermediate),
                     balance_subtree_path: audit_balance_path_target_intermediate,
+                    signal_value: Some(obsolete_target_intermediate),
+                    signal_subtree_path: audit_obsolete_path_target_intermediate,
                 },
             },
             target_after: OperationBranch {
                 address: Some(account_address_target_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: account_witness_target_after,
                     account_path: audit_path_target_after,
                     balance_value: Some(balance_target_after),
                     balance_subtree_path: audit_balance_path_target_after,
+                    signal_value: Some(obsolete_target_after),
+                    signal_subtree_path: audit_obsolete_path_target_after,
                 },
             },
             args: OperationArguments {

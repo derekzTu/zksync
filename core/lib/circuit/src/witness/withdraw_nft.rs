@@ -269,10 +269,12 @@ impl WithdrawNFTWitness<Bn256> {
         let (
             audit_initiator_account_before_first_chunk,
             audit_initiator_balance_before_first_chunk,
+            audit_initiator_obsolete_before_first_chunk,
         ) = get_audits(
             tree,
             withdraw_nft.initiator_account_id,
             withdraw_nft.fee_token,
+            0,
         );
 
         let (
@@ -280,25 +282,31 @@ impl WithdrawNFTWitness<Bn256> {
             _initiator_account_witness_after_first_chunk,
             fee_balance_before_first_chunk,
             _fee_balance_after_first_chunk,
+            initiator_obsolete_before_first_chunk,
+            _initiator_obsolete_after_first_chunk,
         ) = apply_leaf_operation(
             tree,
             withdraw_nft.initiator_account_id,
             withdraw_nft.fee_token,
+            0,
             |acc| {
                 acc.nonce.add_assign(&Fr::from_str("1").unwrap());
             },
             |bal| {
                 bal.value.sub_assign(&fee_as_field_element);
             },
+            |_| {},
         );
 
         let (
             _audit_initiator_account_after_first_chunk,
             _audit_initiator_balance_after_first_chunk,
+            _audit_initiator_obsolete_after_first_chunk,
         ) = get_audits(
             tree,
             withdraw_nft.initiator_account_id,
             withdraw_nft.fee_token,
+            0,
         );
 
         let before_second_chunk_root = tree.root_hash();
@@ -308,55 +316,91 @@ impl WithdrawNFTWitness<Bn256> {
         let (
             audit_initiator_account_before_second_chunk,
             audit_initiator_balance_before_second_chunk,
-        ) = get_audits(tree, withdraw_nft.initiator_account_id, withdraw_nft.token);
+            audit_initiator_obsolete_before_second_chunk,
+        ) = get_audits(
+            tree,
+            withdraw_nft.initiator_account_id,
+            withdraw_nft.token,
+            0,
+        );
 
         let (
             initiator_account_witness_before_second_chunk,
             _initiator_account_witness_after_second_chunk,
             token_balance_before_second_chunk,
             _token_balance_after_second_chunk,
+            initiator_obsolete_before_second_chunk,
+            _initiator_obsolete_after_second_chunk,
         ) = apply_leaf_operation(
             tree,
             withdraw_nft.initiator_account_id,
             withdraw_nft.token,
+            0,
             |_| {},
             |bal| {
                 bal.value.sub_assign(&Fr::from_str("1").unwrap());
             },
+            |_| {},
         );
 
         let (
             _audit_initiator_account_after_second_chunk,
             _audit_initiator_balance_after_second_chunk,
-        ) = get_audits(tree, withdraw_nft.initiator_account_id, withdraw_nft.token);
+            _audit_initiator_obsolete_after_second_chunk,
+        ) = get_audits(
+            tree,
+            withdraw_nft.initiator_account_id,
+            withdraw_nft.token,
+            0,
+        );
 
         // third chunk
-        let (audit_special_account_third_chunk, audit_special_balance_third_chunk) =
-            get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, withdraw_nft.token);
+        let (
+            audit_special_account_third_chunk,
+            audit_special_balance_third_chunk,
+            audit_special_obsolete_third_chunk,
+        ) = get_audits(tree, NFT_STORAGE_ACCOUNT_ID.0, withdraw_nft.token, 0);
 
         let (
             special_account_witness_third_chunk,
             _special_account_witness_third_chunk,
             special_account_balance_third_chunk,
             _special_account_balance_third_chunk,
+            special_account_obsolete_third_chunk,
+            _special_account_obsolete_third_chunk,
         ) = apply_leaf_operation(
             tree,
             NFT_STORAGE_ACCOUNT_ID.0,
             withdraw_nft.token,
+            0,
+            |_| {},
             |_| {},
             |_| {},
         );
 
         // fourth chunk
-        let (audit_creator_account_fourth_chunk, audit_creator_balance_fourth_chunk) =
-            get_audits(tree, withdraw_nft.creator_account_id, 0);
+        let (
+            audit_creator_account_fourth_chunk,
+            audit_creator_balance_fourth_chunk,
+            audit_creator_obsolete_fourth_chunk,
+        ) = get_audits(tree, withdraw_nft.creator_account_id, 0, 0);
 
         let (
             creator_account_witness_fourth_chunk,
             _creator_account_witness_fourth_chunk,
             creator_account_balance_fourth_chunk,
             _creator_account_balance_fourth_chunk,
-        ) = apply_leaf_operation(tree, withdraw_nft.creator_account_id, 0, |_| {}, |_| {});
+            creator_account_obsolete_fourth_chunk,
+            _creator_account_obsolete_fourth_chunk,
+        ) = apply_leaf_operation(
+            tree,
+            withdraw_nft.creator_account_id,
+            0,
+            0,
+            |_| {},
+            |_| {},
+            |_| {},
+        );
 
         let after_root = tree.root_hash();
         vlog::debug!("After root = {}", after_root);
@@ -418,41 +462,53 @@ impl WithdrawNFTWitness<Bn256> {
             initiator_before_first_chunk: OperationBranch {
                 address: Some(initiator_account_id_fe),
                 token: Some(fee_token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: initiator_account_witness_before_first_chunk,
                     account_path: audit_initiator_account_before_first_chunk,
                     balance_value: Some(fee_balance_before_first_chunk),
                     balance_subtree_path: audit_initiator_balance_before_first_chunk,
+                    signal_value: Some(initiator_obsolete_before_first_chunk),
+                    signal_subtree_path: audit_initiator_obsolete_before_first_chunk,
                 },
             },
             initiator_before_second_chunk: OperationBranch {
                 address: Some(initiator_account_id_fe),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: initiator_account_witness_before_second_chunk,
                     account_path: audit_initiator_account_before_second_chunk,
                     balance_value: Some(token_balance_before_second_chunk),
                     balance_subtree_path: audit_initiator_balance_before_second_chunk,
+                    signal_value: Some(initiator_obsolete_before_second_chunk),
+                    signal_subtree_path: audit_initiator_obsolete_before_second_chunk,
                 },
             },
             special_account_third_chunk: OperationBranch {
                 address: Some(fr_from(&NFT_STORAGE_ACCOUNT_ID.0)),
                 token: Some(token_fe),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: special_account_witness_third_chunk,
                     account_path: audit_special_account_third_chunk,
                     balance_value: Some(special_account_balance_third_chunk),
                     balance_subtree_path: audit_special_balance_third_chunk,
+                    signal_value: Some(special_account_obsolete_third_chunk),
+                    signal_subtree_path: audit_special_obsolete_third_chunk,
                 },
             },
             creator_account_fourth_chunk: OperationBranch {
                 address: Some(creator_account_id_fe),
                 token: Some(Fr::zero()),
+                obsolete: Some(Fr::zero()),
                 witness: OperationBranchWitness {
                     account_witness: creator_account_witness_fourth_chunk,
                     account_path: audit_creator_account_fourth_chunk,
                     balance_value: Some(creator_account_balance_fourth_chunk),
                     balance_subtree_path: audit_creator_balance_fourth_chunk,
+                    signal_value: Some(creator_account_obsolete_fourth_chunk),
+                    signal_subtree_path: audit_creator_obsolete_fourth_chunk,
                 },
             },
         }

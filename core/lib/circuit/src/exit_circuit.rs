@@ -65,7 +65,7 @@ impl<'a, E: RescueEngine> Circuit<E> for ZkSyncExitCircuit<'a, E> {
             &self.account_audit_data,
         )?;
         // calculate root for given account data
-        let (state_root, _, _) = check_account_data(
+        let (state_root, _, _, _) = check_account_data(
             cs.namespace(|| "calculate account root"),
             &branch,
             zksync_crypto::params::account_tree_depth(),
@@ -95,7 +95,7 @@ impl<'a, E: RescueEngine> Circuit<E> for ZkSyncExitCircuit<'a, E> {
             &self.special_account_audit_data,
         )?;
         // calculate root for given account data
-        let (state_root_special_branch, _, _) = check_account_data(
+        let (state_root_special_branch, _, _, _) = check_account_data(
             cs.namespace(|| "calculate account root (special_account_branch)"),
             &special_account_branch,
             zksync_crypto::params::account_tree_depth(),
@@ -107,7 +107,7 @@ impl<'a, E: RescueEngine> Circuit<E> for ZkSyncExitCircuit<'a, E> {
             &self.creator_account_audit_data,
         )?;
         // calculate root for given account data
-        let (state_root_creator_branch, _, _) = check_account_data(
+        let (state_root_creator_branch, _, _, _) = check_account_data(
             cs.namespace(|| "calculate account root (creator_account_branch)"),
             &creator_account_branch,
             zksync_crypto::params::account_tree_depth(),
@@ -249,29 +249,49 @@ pub fn create_exit_circuit_with_public_input(
     let token_id_fe = Fr::from_str(&token_id.to_string()).unwrap();
     let serial_id_fe = Fr::from_str(&nft_serial_id.to_string()).unwrap();
     let root_hash = account_tree.root_hash();
-    let (account_witness, _, balance, _) =
-        apply_leaf_operation(account_tree, *account_id, *token_id as u32, |_| {}, |_| {});
-    let (audit_path, audit_balance_path) = get_audits(account_tree, *account_id, *token_id as u32);
-
-    let (special_account_witness, _, special_account_balance, _) = apply_leaf_operation(
+    let (account_witness, _, balance, _, obsolete, _) = apply_leaf_operation(
         account_tree,
-        NFT_STORAGE_ACCOUNT_ID.0,
+        *account_id,
         *token_id as u32,
+        0,
+        |_| {},
         |_| {},
         |_| {},
     );
-    let (special_account_audit_path, special_account_audit_balance_path) =
-        get_audits(account_tree, NFT_STORAGE_ACCOUNT_ID.0, *token_id as u32);
+    let (audit_path, audit_balance_path, audit_obsolete_path) =
+        get_audits(account_tree, *account_id, *token_id as u32, 0);
 
-    let (creator_account_witness, _, creator_account_balance, _) = apply_leaf_operation(
-        account_tree,
-        *nft_creator_id,
-        *token_id as u32,
-        |_| {},
-        |_| {},
-    );
-    let (creator_account_audit_path, creator_account_audit_balance_path) =
-        get_audits(account_tree, *nft_creator_id, *token_id as u32);
+    let (special_account_witness, _, special_account_balance, _, special_obsolete_signal, _) =
+        apply_leaf_operation(
+            account_tree,
+            NFT_STORAGE_ACCOUNT_ID.0,
+            *token_id as u32,
+            0,
+            |_| {},
+            |_| {},
+            |_| {},
+        );
+    let (
+        special_account_audit_path,
+        special_account_audit_balance_path,
+        special_account_audit_obsolete_path,
+    ) = get_audits(account_tree, NFT_STORAGE_ACCOUNT_ID.0, *token_id as u32, 0);
+
+    let (creator_account_witness, _, creator_account_balance, _, creator_account_obsolete, _) =
+        apply_leaf_operation(
+            account_tree,
+            *nft_creator_id,
+            *token_id as u32,
+            0,
+            |_| {},
+            |_| {},
+            |_| {},
+        );
+    let (
+        creator_account_audit_path,
+        creator_account_audit_balance_path,
+        creator_account_audit_obsolete_path,
+    ) = get_audits(account_tree, *nft_creator_id, *token_id as u32, 0);
 
     let mut pubdata_commitment = Vec::new();
     append_be_fixed_width(
@@ -344,31 +364,40 @@ pub fn create_exit_circuit_with_public_input(
         account_audit_data: OperationBranch {
             address: Some(account_address_fe),
             token: Some(token_id_fe),
+            obsolete: Some(Fr::zero()),
             witness: OperationBranchWitness {
                 account_witness,
                 account_path: audit_path,
                 balance_value: Some(balance),
                 balance_subtree_path: audit_balance_path,
+                signal_value: Some(obsolete),
+                signal_subtree_path: audit_obsolete_path,
             },
         },
         special_account_audit_data: OperationBranch {
             address: Some(fr_from(&NFT_STORAGE_ACCOUNT_ID)),
             token: Some(token_id_fe),
+            obsolete: Some(Fr::zero()),
             witness: OperationBranchWitness {
                 account_witness: special_account_witness,
                 account_path: special_account_audit_path,
                 balance_value: Some(special_account_balance),
                 balance_subtree_path: special_account_audit_balance_path,
+                signal_value: Some(special_obsolete_signal),
+                signal_subtree_path: special_account_audit_obsolete_path,
             },
         },
         creator_account_audit_data: OperationBranch {
             address: Some(creator_account_address_fe),
             token: Some(token_id_fe),
+            obsolete: Some(Fr::zero()),
             witness: OperationBranchWitness {
                 account_witness: creator_account_witness,
                 account_path: creator_account_audit_path,
                 balance_value: Some(creator_account_balance),
                 balance_subtree_path: creator_account_audit_balance_path,
+                signal_value: Some(creator_account_obsolete),
+                signal_subtree_path: creator_account_audit_obsolete_path,
             },
         },
         serial_id: Some(serial_id_fe),

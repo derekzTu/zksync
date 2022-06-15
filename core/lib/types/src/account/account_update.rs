@@ -2,6 +2,7 @@ use num::BigUint;
 use serde::{Deserialize, Serialize};
 
 use super::{Nonce, TokenId};
+use crate::account::account_update::NonceUpdate::{ObsoleteNonce, UpdateNonce};
 use zksync_basic_types::Address;
 
 use super::PubKeyHash;
@@ -26,6 +27,7 @@ pub enum AccountUpdate {
     UpdateBalance {
         old_nonce: Nonce,
         new_nonce: Nonce,
+        obsolete: Option<Obsolete>,
         /// Tuple of (token, old_balance, new_balance)
         balance_update: (TokenId, BigUint, BigUint),
     },
@@ -61,10 +63,12 @@ impl AccountUpdate {
             AccountUpdate::UpdateBalance {
                 old_nonce,
                 new_nonce,
+                obsolete,
                 balance_update,
             } => AccountUpdate::UpdateBalance {
                 old_nonce: *new_nonce,
                 new_nonce: *old_nonce,
+                obsolete: obsolete.map(|o| o.toggle()),
                 balance_update: (
                     balance_update.0,
                     balance_update.2.clone(),
@@ -90,6 +94,58 @@ impl AccountUpdate {
                 token: token.clone(),
                 nonce: *nonce,
             },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Obsolete {
+    pub nonce: Nonce,
+    pub reset: bool,
+}
+
+impl Obsolete {
+    pub fn new(nonce: Nonce) -> Self {
+        Self {
+            nonce,
+            reset: false,
+        }
+    }
+
+    pub fn reset(nonce: Nonce) -> Self {
+        Self { nonce, reset: true }
+    }
+
+    pub fn toggle(self) -> Self {
+        Self {
+            nonce: self.nonce,
+            reset: !self.reset,
+        }
+    }
+}
+
+pub enum NonceUpdate {
+    UpdateNonce(u32),
+    ObsoleteNonce(Option<Obsolete>),
+}
+
+impl From<u32> for NonceUpdate {
+    fn from(nonce_update: u32) -> Self {
+        UpdateNonce(nonce_update)
+    }
+}
+
+impl From<Option<Obsolete>> for NonceUpdate {
+    fn from(obsolete: Option<Obsolete>) -> Self {
+        ObsoleteNonce(obsolete)
+    }
+}
+
+impl From<NonceUpdate> for (u32, Option<Obsolete>) {
+    fn from(upd: NonceUpdate) -> Self {
+        match upd {
+            UpdateNonce(nonce_update) => (nonce_update, None),
+            ObsoleteNonce(obsolete) => (0, obsolete),
         }
     }
 }

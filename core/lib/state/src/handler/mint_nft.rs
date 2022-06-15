@@ -99,6 +99,7 @@ impl TxHandler<MintNFT> for ZkSyncState {
                 balance_update: (op.tx.fee_token, old_balance, new_balance),
                 old_nonce: nonce,
                 new_nonce: creator_account.nonce,
+                obsolete: None,
             },
         ));
         self.insert_account(op.creator_account_id, creator_account.clone());
@@ -115,6 +116,7 @@ impl TxHandler<MintNFT> for ZkSyncState {
                 balance_update: (NFT_TOKEN_ID, old_balance, new_balance),
                 old_nonce,
                 new_nonce: creator_account.nonce,
+                obsolete: None,
             },
         ));
         self.insert_account(op.creator_account_id, creator_account.clone());
@@ -133,6 +135,7 @@ impl TxHandler<MintNFT> for ZkSyncState {
                 balance_update: (NFT_TOKEN_ID, new_token_id.clone(), next_token_id),
                 old_nonce: Nonce(0),
                 new_nonce: Nonce(0),
+                obsolete: None,
             },
         ));
         self.insert_account(NFT_STORAGE_ACCOUNT_ID, nft_account.clone());
@@ -176,6 +179,7 @@ impl TxHandler<MintNFT> for ZkSyncState {
                 balance_update: (token_id, BigUint::zero(), token_data),
                 old_nonce: nft_account.nonce,
                 new_nonce: nft_account.nonce,
+                obsolete: None,
             },
         ));
         self.insert_account(NFT_STORAGE_ACCOUNT_ID, nft_account);
@@ -197,6 +201,7 @@ impl TxHandler<MintNFT> for ZkSyncState {
                 balance_update: (token_id, BigUint::zero(), BigUint::from(1u32)),
                 old_nonce,
                 new_nonce: recipient_account.nonce,
+                obsolete: None,
             },
         ));
         self.insert_account(op.recipient_account_id, recipient_account);
@@ -230,6 +235,7 @@ impl ZkSyncState {
                     balance_update: (NFT_TOKEN_ID, BigUint::zero(), balance),
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                 },
             ));
             account

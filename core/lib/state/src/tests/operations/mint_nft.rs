@@ -61,6 +61,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: creator_account.nonce,
                     new_nonce: creator_account.nonce + 1,
+                    obsolete: None,
                     balance_update: (fee_token_id, BigUint::from(20u32), BigUint::from(10u32)),
                 },
             ),
@@ -70,6 +71,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: creator_account.nonce + 1,
                     new_nonce: creator_account.nonce + 1,
+                    obsolete: None,
                     balance_update: (NFT_TOKEN_ID, BigUint::zero(), BigUint::from(1u32)),
                 },
             ),
@@ -87,6 +89,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (NFT_TOKEN_ID, BigUint::zero(), balance),
                 },
             ),
@@ -96,6 +99,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (
                         NFT_TOKEN_ID,
                         BigUint::from(MIN_NFT_TOKEN_ID),
@@ -117,6 +121,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: to_account.nonce,
                     new_nonce: to_account.nonce,
+                    obsolete: None,
                     balance_update: (nft.id, BigUint::zero(), token_data),
                 },
             ),
@@ -126,6 +131,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: to_account.nonce,
                     new_nonce: to_account.nonce,
+                    obsolete: None,
                     balance_update: (nft.id, BigUint::zero(), BigUint::from(1u32)),
                 },
             ),
@@ -170,6 +176,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: creator_account.nonce,
                     new_nonce: creator_account.nonce + 1,
+                    obsolete: None,
                     balance_update: (fee_token_id, fee, BigUint::zero()),
                 },
             ),
@@ -179,6 +186,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: creator_account.nonce + 1,
                     new_nonce: creator_account.nonce + 1,
+                    obsolete: None,
                     balance_update: (NFT_TOKEN_ID, BigUint::from(1u32), BigUint::from(2u32)),
                 },
             ),
@@ -188,6 +196,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (
                         NFT_TOKEN_ID,
                         BigUint::from(MIN_NFT_TOKEN_ID + 1),
@@ -209,6 +218,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: to_account.nonce,
                     new_nonce: to_account.nonce,
+                    obsolete: None,
                     balance_update: (nft.id, BigUint::zero(), token_data),
                 },
             ),
@@ -218,6 +228,7 @@ fn mint_success() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: to_account.nonce,
                     new_nonce: to_account.nonce,
+                    obsolete: None,
                     balance_update: (nft.id, BigUint::zero(), BigUint::from(1u32)),
                 },
             ),
@@ -312,6 +323,7 @@ fn mint_token_to_new_account() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: creator_account.nonce,
                     new_nonce: creator_account.nonce + 1,
+                    obsolete: None,
                     balance_update: (fee_token_id, balance_from, fee),
                 },
             ),
@@ -321,6 +333,7 @@ fn mint_token_to_new_account() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (fee_token_id, balance_to.clone(), balance_to),
                 },
             ),
@@ -330,6 +343,7 @@ fn mint_token_to_new_account() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: creator_account.nonce + 1,
                     new_nonce: creator_account.nonce + 2,
+                    obsolete: None,
                     balance_update: (fee_token_id, BigUint::from(10u32), BigUint::from(0u32)),
                 },
             ),
@@ -339,6 +353,7 @@ fn mint_token_to_new_account() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: creator_account.nonce + 2,
                     new_nonce: creator_account.nonce + 2,
+                    obsolete: None,
                     balance_update: (NFT_TOKEN_ID, BigUint::zero(), BigUint::from(1u32)),
                 },
             ),
@@ -356,6 +371,7 @@ fn mint_token_to_new_account() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (NFT_TOKEN_ID, BigUint::zero(), balance),
                 },
             ),
@@ -365,6 +381,7 @@ fn mint_token_to_new_account() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (
                         NFT_TOKEN_ID,
                         BigUint::from(MIN_NFT_TOKEN_ID),
@@ -386,6 +403,7 @@ fn mint_token_to_new_account() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (nft.id, BigUint::zero(), token_data),
                 },
             ),
@@ -395,6 +413,7 @@ fn mint_token_to_new_account() {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(0),
                     new_nonce: Nonce(0),
+                    obsolete: None,
                     balance_update: (nft.id, BigUint::zero(), BigUint::from(1u32)),
                 },
             ),

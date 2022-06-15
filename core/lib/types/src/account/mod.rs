@@ -1,20 +1,23 @@
 use zksync_crypto::primitives::GetBits;
 use zksync_utils::BigUintSerdeWrapper;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use num::{BigUint, Zero};
 use serde::{Deserialize, Serialize};
-use zksync_crypto::franklin_crypto::bellman::pairing::ff::PrimeField;
+use zksync_crypto::franklin_crypto::bellman::pairing::ff::{Field, PrimeField};
 
 use super::{AccountId, AccountUpdates, Fr, Nonce, TokenId};
 use zksync_basic_types::Address;
 use zksync_crypto::circuit::{
-    account::{Balance, CircuitAccount},
+    account::{Balance, CircuitAccount, Signal},
     utils::eth_address_to_fr,
 };
 
-pub use self::{account_update::AccountUpdate, pubkey_hash::PubKeyHash};
+pub use self::{
+    account_update::{AccountUpdate, NonceUpdate, Obsolete},
+    pubkey_hash::PubKeyHash,
+};
 use crate::NFT;
 
 mod account_update;
@@ -32,6 +35,7 @@ pub struct Account {
     /// Address of the account. Directly corresponds to the L1 address.
     pub address: Address,
     balances: HashMap<TokenId, BigUintSerdeWrapper>,
+    pub obsoletes: HashSet<Nonce>,
     /// Current nonce of the account. All the transactions require nonce field to be set in
     /// order to not allow double spend, and the nonce must increment by one after each operation.
     pub nonce: Nonce,
@@ -65,6 +69,12 @@ impl From<Account> for CircuitAccount<super::Engine> {
             circuit_account.subtree.insert(*i, b);
         }
 
+        for &i in acc.obsoletes.iter() {
+            circuit_account
+                .obsoletes
+                .insert(*i, Signal { value: Fr::one() });
+        }
+
         circuit_account.nonce = Fr::from_str(&acc.nonce.to_string()).unwrap();
         circuit_account.pub_key_hash = acc.pub_key_hash.as_fr();
         circuit_account.address = eth_address_to_fr(&acc.address);
@@ -76,6 +86,7 @@ impl Default for Account {
     fn default() -> Self {
         Self {
             balances: HashMap::new(),
+            obsoletes: HashSet::new(),
             nonce: Nonce(0),
             pub_key_hash: PubKeyHash::default(),
             address: Address::zero(),
@@ -157,10 +168,12 @@ impl Account {
                 AccountUpdate::UpdateBalance {
                     balance_update: (token, _, amount),
                     new_nonce,
+                    obsolete,
                     ..
                 } => {
                     account.set_balance(token, amount);
                     account.nonce = new_nonce;
+                    account.apply_obsolete(obsolete);
                     Some(account)
                 }
                 AccountUpdate::ChangePubKeyHash {
@@ -209,6 +222,21 @@ impl Account {
         balances.retain(|_, v| v.0 != BigUint::zero());
         balances
     }
+
+    pub fn apply_obsolete<T: Into<Option<Obsolete>>>(&mut self, obsolete: T) {
+        obsolete
+            .into()
+            .into_iter()
+            .for_each(|Obsolete { nonce, reset }| {
+                assert_eq!(self.obsoletes.contains(&nonce), reset);
+
+                if !reset {
+                    self.obsoletes.insert(nonce);
+                } else {
+                    self.obsoletes.remove(&nonce);
+                }
+            });
+    }
 }
 
 #[cfg(test)]
@@ -235,6 +263,7 @@ mod test {
         let bal_update = AccountUpdate::UpdateBalance {
             old_nonce: Nonce(1),
             new_nonce: Nonce(2),
+            obsolete: None,
             balance_update: (TokenId(0), 0u32.into(), 5u32.into()),
         };
 
@@ -334,6 +363,7 @@ mod test {
                 AccountUpdate::UpdateBalance {
                     old_nonce: Nonce(16),
                     new_nonce: Nonce(17),
+                    obsolete: None,
                     balance_update: (TokenId(0), 0u32.into(), 256u32.into()),
                 },
             ),

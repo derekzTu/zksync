@@ -104,6 +104,7 @@ impl<'a, 'c> StateSchema<'a, 'c> {
                     balance_update: (token, ref old_balance, ref new_balance),
                     old_nonce,
                     new_nonce,
+                    obsolete,
                 } => {
                     let account_id = i64::from(**id);
                     let block_number = i64::from(*block_number);
@@ -113,11 +114,14 @@ impl<'a, 'c> StateSchema<'a, 'c> {
                     let old_nonce = i64::from(*old_nonce);
                     let new_nonce = i64::from(*new_nonce);
                     let update_order_id = update_order_id as i32;
+                    let (obsolete, reset) = obsolete
+                        .map(|obsolete| (Option::from(i64::from(*obsolete.nonce)), obsolete.reset))
+                        .unwrap_or_default();
 
                     sqlx::query!(
                         r#"
-                        INSERT INTO account_balance_updates ( account_id, block_number, coin_id, old_balance, new_balance, old_nonce, new_nonce, update_order_id )
-                        VALUES ( $1, $2, $3, $4, $5, $6, $7, $8 )
+                        INSERT INTO account_balance_updates ( account_id, block_number, coin_id, old_balance, new_balance, old_nonce, new_nonce, obsolete, reset, update_order_id )
+                        VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )
                         "#,
                         account_id,
                         block_number,
@@ -126,6 +130,8 @@ impl<'a, 'c> StateSchema<'a, 'c> {
                         new_balance,
                         old_nonce,
                         new_nonce,
+                        obsolete,
+                        reset,
                         update_order_id,
                     )
                     .execute(transaction.conn())
@@ -230,6 +236,32 @@ impl<'a, 'c> StateSchema<'a, 'c> {
                 )
                 .execute(self.0.conn())
                 .await?;
+
+                if let Some(obsolete) = upd.obsolete {
+                    if upd.reset {
+                        sqlx::query!(
+                            r#"
+                            DELETE FROM obsoletes
+                            WHERE account_id = $1 AND nonce = $2
+                            "#,
+                            upd.account_id,
+                            obsolete
+                        )
+                        .execute(self.0.conn())
+                        .await?;
+                    } else {
+                        sqlx::query!(
+                            r#"
+                            INSERT INTO obsoletes ( account_id, nonce )
+                            VALUES ( $1, $2 )
+                            "#,
+                            upd.account_id,
+                            obsolete
+                        )
+                        .execute(self.0.conn())
+                        .await?;
+                    }
+                }
             }
 
             StorageAccountDiff::Create(upd) => {
@@ -471,6 +503,13 @@ impl<'a, 'c> StateSchema<'a, 'c> {
             )
             .fetch_all(transaction.conn())
             .await?;
+            let obsoletes = sqlx::query_as!(
+                StorageObsolete,
+                "SELECT * FROM obsoletes WHERE account_id = ANY($1)",
+                &stored_account_ids
+            )
+            .fetch_all(transaction.conn())
+            .await?;
 
             let mut balances_for_id: HashMap<AccountId, Vec<StorageBalance>> = HashMap::new();
 
@@ -481,10 +520,20 @@ impl<'a, 'c> StateSchema<'a, 'c> {
                     .or_insert_with(|| vec![balance]);
             }
 
+            let mut obsoletes_for_id: HashMap<AccountId, Vec<StorageObsolete>> = HashMap::new();
+
+            for obsolete in obsoletes.into_iter() {
+                obsoletes_for_id
+                    .entry(AccountId(obsolete.account_id as u32))
+                    .and_modify(|obsoletes| obsoletes.push(obsolete.clone()))
+                    .or_insert_with(|| vec![obsolete]);
+            }
+
             for stored_account in stored_accounts {
                 let id = AccountId(stored_account.id as u32);
                 let balances = balances_for_id.remove(&id).unwrap_or_default();
-                let (id, account) = restore_account(stored_account, balances);
+                let obsoletes = obsoletes_for_id.remove(&id).unwrap_or_default();
+                let (id, account) = restore_account(stored_account, balances, obsoletes);
                 account_map.insert(id, account);
             }
         }

@@ -33,6 +33,8 @@ pub struct StorageAccountUpdate {
     pub new_balance: BigDecimal,
     pub old_nonce: i64,
     pub new_nonce: i64,
+    pub obsolete: Option<i64>,
+    pub reset: bool,
     pub update_order_id: i32,
 }
 
@@ -81,6 +83,12 @@ pub struct StorageBalance {
     pub account_id: i64,
     pub coin_id: i32,
     pub balance: BigDecimal,
+}
+
+#[derive(Debug, FromRow, Clone)]
+pub struct StorageObsolete {
+    pub account_id: i64,
+    pub nonce: i64,
 }
 
 #[derive(Debug, Clone, Copy, sqlx::Type)]

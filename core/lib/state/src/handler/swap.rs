@@ -129,7 +129,10 @@ impl ZkSyncState {
 
         let verify_account = |order: &Order, amount: &BigUint| {
             let account = self.get_account(order.account_id).unwrap();
-            invariant!(order.nonce == account.nonce, SwapOpError::NonceMismatch);
+            invariant!(
+                !account.obsoletes.contains(&order.nonce),
+                SwapOpError::NonceObsolete
+            );
             let necessary_amount =
                 if tx.submitter_id == order.account_id && tx.fee_token == order.token_sell {
                     &tx.fee + amount
@@ -207,10 +210,8 @@ impl ZkSyncState {
         self.verify_swap(&op.tx)?;
         self.verify_swap_accounts(op)?;
 
-        let increment_0 =
-            (!op.tx.orders.0.amount.is_zero() && op.accounts.0 != op.submitter) as u32;
-        let increment_1 =
-            (!op.tx.orders.1.amount.is_zero() && op.accounts.1 != op.submitter) as u32;
+        let obsolete_0 = op.tx.orders.0.obsolete();
+        let obsolete_1 = op.tx.orders.1.obsolete();
         let token_0 = op.tx.orders.0.token_sell;
         let token_1 = op.tx.orders.1.token_sell;
         let amounts = op.tx.amounts.clone();
@@ -218,9 +219,9 @@ impl ZkSyncState {
         use crate::state::BalanceUpdate::*;
 
         let updates = vec![
-            self.update_account(op.accounts.0, token_0, Sub(amounts.0.clone()), increment_0),
+            self.update_account(op.accounts.0, token_0, Sub(amounts.0.clone()), obsolete_0),
             self.update_account(op.recipients.1, token_0, Add(amounts.0), 0),
-            self.update_account(op.accounts.1, token_1, Sub(amounts.1.clone()), increment_1),
+            self.update_account(op.accounts.1, token_1, Sub(amounts.1.clone()), obsolete_1),
             self.update_account(op.recipients.0, token_1, Add(amounts.1), 0),
             self.update_account(op.submitter, op.tx.fee_token, Sub(op.tx.fee.clone()), 1),
         ];

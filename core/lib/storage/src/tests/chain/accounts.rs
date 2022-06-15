@@ -242,6 +242,7 @@ async fn test_get_balance(mut storage: StorageProcessor<'_>) -> QueryResult<()> 
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(0),
                 new_nonce: Nonce(1),
+                obsolete: None,
                 balance_update: (TokenId(0), BigUint::zero(), BigUint::from(100u32)),
             },
         ),
@@ -252,6 +253,7 @@ async fn test_get_balance(mut storage: StorageProcessor<'_>) -> QueryResult<()> 
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(1),
                 new_nonce: Nonce(2),
+                obsolete: None,
                 balance_update: (TokenId(0), BigUint::from(100u32), BigUint::from(200u32)),
             },
         ),
@@ -260,6 +262,7 @@ async fn test_get_balance(mut storage: StorageProcessor<'_>) -> QueryResult<()> 
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(2),
                 new_nonce: Nonce(3),
+                obsolete: None,
                 balance_update: (TokenId(0), BigUint::from(200u32), BigUint::from(300u32)),
             },
         ),
@@ -268,6 +271,7 @@ async fn test_get_balance(mut storage: StorageProcessor<'_>) -> QueryResult<()> 
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(3),
                 new_nonce: Nonce(4),
+                obsolete: None,
                 balance_update: (TokenId(1), BigUint::zero(), BigUint::from(10000u32)),
             },
         ),
@@ -366,6 +370,7 @@ async fn test_get_account_nft_balance(mut storage: StorageProcessor<'_>) -> Quer
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(0),
                 new_nonce: Nonce(1),
+                obsolete: None,
                 balance_update: (nft_id, BigUint::zero(), BigUint::from(1u32)),
             },
         ),
@@ -394,6 +399,7 @@ async fn test_get_account_nft_balance(mut storage: StorageProcessor<'_>) -> Quer
         AccountUpdate::UpdateBalance {
             old_nonce: Nonce(0),
             new_nonce: Nonce(1),
+            obsolete: None,
             balance_update: (NFT_TOKEN_ID, BigUint::zero(), BigUint::from(1u32)),
         },
     )];
@@ -448,6 +454,7 @@ async fn test_get_nft_owner(mut storage: StorageProcessor<'_>) -> QueryResult<()
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(0),
                 new_nonce: Nonce(1),
+                obsolete: None,
                 balance_update: (nft_id, BigUint::zero(), BigUint::from(1u32)),
             },
         ),
@@ -495,6 +502,7 @@ async fn test_get_nft_owner(mut storage: StorageProcessor<'_>) -> QueryResult<()
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(1),
                 new_nonce: Nonce(2),
+                obsolete: None,
                 balance_update: (nft_id, BigUint::from(1u32), BigUint::zero()),
             },
         ),
@@ -503,6 +511,7 @@ async fn test_get_nft_owner(mut storage: StorageProcessor<'_>) -> QueryResult<()
             AccountUpdate::UpdateBalance {
                 old_nonce: Nonce(0),
                 new_nonce: Nonce(1),
+                obsolete: None,
                 balance_update: (nft_id, BigUint::zero(), BigUint::from(1u32)),
             },
         ),

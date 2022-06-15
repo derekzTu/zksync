@@ -129,6 +129,7 @@ impl InMemoryStorageInteractor {
                     balance_update: (token, _, new_balance),
                     old_nonce: _,
                     new_nonce,
+                    obsolete,
                 } => {
                     let account = inner
                         .accounts
@@ -136,6 +137,7 @@ impl InMemoryStorageInteractor {
                         .expect("In tests this account should be stored");
                     account.set_balance(*token, new_balance.clone());
                     account.nonce = max(account.nonce, *new_nonce);
+                    account.apply_obsolete(*obsolete);
                 }
                 AccountUpdate::ChangePubKeyHash {
                     old_pub_key_hash: _,

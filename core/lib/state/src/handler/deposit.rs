@@ -71,6 +71,7 @@ impl TxHandler<Deposit> for ZkSyncState {
                 balance_update: (op.priority_op.token, old_amount, new_amount),
                 old_nonce,
                 new_nonce: old_nonce,
+                obsolete: None,
             },
         ));
 

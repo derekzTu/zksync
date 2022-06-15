@@ -13,7 +13,9 @@ use zksync_crypto::rand::{Rng, SeedableRng, XorShiftRng};
 // Workspace deps
 use zksync_crypto::{
     circuit::{
-        account::{Balance, CircuitAccount, CircuitAccountTree, CircuitBalanceTree},
+        account::{
+            Balance, CircuitAccount, CircuitAccountTree, CircuitBalanceTree, CircuitObsoleteTree,
+        },
         utils::pub_key_hash_fe,
     },
     merkle_tree::RescueHasher,
@@ -62,6 +64,7 @@ fn insert_validator(
 
     // Create a validator account as an account tree leaf.
     let validator_leaf = CircuitAccount::<Bn256> {
+        obsoletes: CircuitObsoleteTree::new(params::obsolete_tree_depth()),
         subtree: CircuitBalanceTree::new(params::balance_tree_depth()),
         nonce: Fr::zero(),
         pub_key_hash: validator_pub_key_hash,
@@ -106,6 +109,7 @@ fn insert_sender(
     );
 
     let sender_leaf_initial = CircuitAccount::<Bn256> {
+        obsoletes: CircuitObsoleteTree::new(params::obsolete_tree_depth()),
         subtree: sender_balance_tree,
         nonce: Fr::zero(),
         pub_key_hash: sender_pub_key_hash,
@@ -188,7 +192,12 @@ fn incorrect_circuit_pubdata() {
     // Perform the `noop` operation and collect the data required for circuit instance creation.
     let operation = noop_operation(&tree, validator_address_number);
     let (_, validator_account_witness) = apply_fee(&mut tree, validator_address_number, 0, 0);
-    let (validator_audit_path, _) = get_audits(&tree, validator_address_number, 0);
+    let (validator_audit_path, _, _) = get_audits(&tree, validator_address_number, 0, 0);
+    let validator_obsoletes_root = tree
+        .get(validator_address_number)
+        .unwrap_or(&CircuitAccount::default())
+        .obsoletes
+        .root_hash();
     let validator_non_processable_tokens_audit = tree
         .get(validator_address_number)
         .unwrap_or(&CircuitAccount::default())
@@ -260,6 +269,7 @@ fn incorrect_circuit_pubdata() {
             validator_address: Some(validator_address),
             validator_balances: validator_balances.clone(),
             validator_audit_path: validator_audit_path.clone(),
+            validator_obsoletes_root: Some(validator_obsoletes_root),
             validator_non_processable_tokens_audit_before_fees:
                 validator_non_processable_tokens_audit.clone(),
             validator_non_processable_tokens_audit_after_fees:
@@ -304,6 +314,7 @@ fn incorrect_circuit_pubdata() {
         validator_address: Some(validator_address),
         validator_balances: validator_balances.clone(),
         validator_audit_path: validator_audit_path.clone(),
+        validator_obsoletes_root: Some(validator_obsoletes_root),
         validator_non_processable_tokens_audit_before_fees: validator_non_processable_tokens_audit
             .clone(),
         validator_non_processable_tokens_audit_after_fees: validator_non_processable_tokens_audit
@@ -353,6 +364,7 @@ fn incorrect_circuit_pubdata() {
         validator_address: Some(validator_address),
         validator_balances,
         validator_audit_path,
+        validator_obsoletes_root: Some(validator_obsoletes_root),
         validator_non_processable_tokens_audit_before_fees: validator_non_processable_tokens_audit
             .clone(),
         validator_non_processable_tokens_audit_after_fees: validator_non_processable_tokens_audit,

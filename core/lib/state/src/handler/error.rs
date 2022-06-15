@@ -189,6 +189,8 @@ pub enum SwapOpError {
     RecipientAccountNotFound,
     #[error("Nonce mismatch")]
     NonceMismatch,
+    #[error("Nonce obsolete")]
+    NonceObsolete,
     #[error("Not enough balance")]
     InsufficientBalance,
     #[error("Buy/Sell tokens do not match")]

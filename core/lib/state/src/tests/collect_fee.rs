@@ -38,6 +38,7 @@ fn success() {
             AccountUpdate::UpdateBalance {
                 old_nonce: nonce,
                 new_nonce: nonce,
+                obsolete: None,
                 balance_update: (TokenId(0), BigUint::from(145u32), BigUint::from(290u32)),
             },
         ),
@@ -46,6 +47,7 @@ fn success() {
             AccountUpdate::UpdateBalance {
                 old_nonce: nonce,
                 new_nonce: nonce,
+                obsolete: None,
                 balance_update: (TokenId(2), BigUint::zero(), BigUint::from(123456u32)),
             },
         ),

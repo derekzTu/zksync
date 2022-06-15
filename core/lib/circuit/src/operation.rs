@@ -16,12 +16,16 @@ pub struct OperationBranchWitness<E: RescueEngine> {
 
     pub balance_value: Option<E::Fr>,
     pub balance_subtree_path: Vec<Option<E::Fr>>,
+
+    pub signal_value: Option<E::Fr>,
+    pub signal_subtree_path: Vec<Option<E::Fr>>,
 }
 
 #[derive(Clone, Debug)]
 pub struct OperationBranch<E: RescueEngine> {
     pub address: Option<E::Fr>,
     pub token: Option<E::Fr>,
+    pub obsolete: Option<E::Fr>,
 
     pub witness: OperationBranchWitness<E>,
 }

@@ -53,6 +53,7 @@ pub fn get_account_event(
     let update_details = AccountUpdateDetails {
         account_id,
         nonce: Nonce(0),
+        obsolete: None,
         new_pub_key_hash: None,
         token_id,
         new_balance,

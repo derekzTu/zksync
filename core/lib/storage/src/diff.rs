@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 // External imports
 use num::bigint::ToBigInt;
 // Workspace imports
+use zksync_types::account::Obsolete;
 use zksync_types::{AccountId, AccountUpdate, Address, Nonce, PubKeyHash, TokenId, H256, NFT};
 // Local imports
 use crate::chain::account::records::*;
@@ -68,6 +69,10 @@ impl From<StorageAccountDiff> for (AccountId, AccountUpdate) {
                     AccountUpdate::UpdateBalance {
                         old_nonce: Nonce(upd.old_nonce as u32),
                         new_nonce: Nonce(upd.new_nonce as u32),
+                        obsolete: upd.obsolete.map(|nonce| Obsolete {
+                            nonce: Nonce(nonce as u32),
+                            reset: upd.reset,
+                        }),
                         balance_update: (TokenId(upd.coin_id as u32), old_balance, new_balance),
                     },
                 )

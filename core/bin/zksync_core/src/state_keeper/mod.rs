@@ -556,6 +556,7 @@ impl ZkSyncStateKeeper {
         let db_set_special_account_balance = AccountUpdate::UpdateBalance {
             old_nonce: special_account.nonce,
             new_nonce: special_account.nonce,
+            obsolete: None,
             balance_update: (
                 NFT_TOKEN_ID,
                 num::BigUint::from(0u64),

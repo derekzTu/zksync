@@ -26,6 +26,9 @@ pub struct AllocatedOperationBranch<E: RescueEngine> {
     pub balance: CircuitElement<E>,
     pub balance_audit_path: Vec<AllocatedNum<E>>,
     pub token: CircuitElement<E>,
+    pub signal: CircuitElement<E>,
+    pub signal_audit_path: Vec<AllocatedNum<E>>,
+    pub obsolete: CircuitElement<E>,
 }
 
 impl<E: RescueEngine> AllocatedOperationBranch<E> {
@@ -75,13 +78,37 @@ impl<E: RescueEngine> AllocatedOperationBranch<E> {
             franklin_constants::balance_tree_depth()
         );
 
+        let signal = CircuitElement::from_fe_with_known_length(
+            cs.namespace(|| "signal"),
+            || operation_branch.witness.signal_value.grab(),
+            1,
+        )?;
+
+        let obsolete = CircuitElement::from_fe_with_known_length(
+            cs.namespace(|| "obsolete"),
+            || operation_branch.obsolete.grab(),
+            franklin_constants::obsolete_tree_depth(),
+        )?;
+        let obsolete = obsolete.pad(franklin_constants::OBSOLETE_BIT_WIDTH);
+        let signal_audit_path = utils::allocate_numbers_vec(
+            cs.namespace(|| "signal_audit_path"),
+            &operation_branch.witness.signal_subtree_path,
+        )?;
+        assert_eq!(
+            signal_audit_path.len(),
+            franklin_constants::obsolete_tree_depth()
+        );
+
         Ok(AllocatedOperationBranch {
             account,
             account_audit_path,
             account_id: account_address,
             balance,
-            token,
             balance_audit_path,
+            token,
+            signal,
+            signal_audit_path,
+            obsolete,
         })
     }
 }

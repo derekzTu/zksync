@@ -1,7 +1,7 @@
 use crate::tests::{AccountState::*, PlasmaTestBuilder};
 use num::{BigUint, Zero};
 use zksync_crypto::PrivateKey;
-use zksync_types::{Account, AccountId, AccountUpdate, Order, Swap, TokenId};
+use zksync_types::{account::Obsolete, Account, AccountId, AccountUpdate, Order, Swap, TokenId};
 use TestResult::*;
 
 type TestAccount = (AccountId, Account, PrivateKey);
@@ -128,6 +128,11 @@ impl TestSwap {
                             AccountUpdate::UpdateBalance {
                                 old_nonce: account_0.nonce + nonce_changes[0].0,
                                 new_nonce: account_0.nonce + nonce_changes[0].1,
+                                obsolete: if self.is_limit_order.0 {
+                                    None
+                                } else {
+                                    Obsolete::new(account_0.nonce).into()
+                                },
                                 balance_update: (
                                     token_0,
                                     balance_changes[0].0.clone(),
@@ -140,6 +145,7 @@ impl TestSwap {
                             AccountUpdate::UpdateBalance {
                                 old_nonce: recipient_1.nonce + nonce_changes[1].0,
                                 new_nonce: recipient_1.nonce + nonce_changes[1].1,
+                                obsolete: None,
                                 balance_update: (
                                     token_0,
                                     balance_changes[1].0.clone(),
@@ -152,6 +158,11 @@ impl TestSwap {
                             AccountUpdate::UpdateBalance {
                                 old_nonce: account_1.nonce + nonce_changes[2].0,
                                 new_nonce: account_1.nonce + nonce_changes[2].1,
+                                obsolete: if self.is_limit_order.1 {
+                                    None
+                                } else {
+                                    Obsolete::new(account_1.nonce).into()
+                                },
                                 balance_update: (
                                     token_1,
                                     balance_changes[2].0.clone(),
@@ -164,6 +175,7 @@ impl TestSwap {
                             AccountUpdate::UpdateBalance {
                                 old_nonce: recipient_0.nonce + nonce_changes[3].0,
                                 new_nonce: recipient_0.nonce + nonce_changes[3].1,
+                                obsolete: None,
                                 balance_update: (
                                     token_1,
                                     balance_changes[3].0.clone(),
@@ -176,6 +188,7 @@ impl TestSwap {
                             AccountUpdate::UpdateBalance {
                                 old_nonce: submitter.nonce + nonce_changes[4].0,
                                 new_nonce: submitter.nonce + nonce_changes[4].1,
+                                obsolete: None,
                                 balance_update: (
                                     fee_token,
                                     balance_changes[4].0.clone(),
@@ -223,7 +236,7 @@ fn regular_swap() {
     test_swap.test(
         tb,
         Success {
-            nonce_changes: vec![(0, 1), (0, 0), (0, 1), (0, 0), (0, 1)],
+            nonce_changes: vec![(0, 0), (0, 0), (0, 0), (0, 0), (0, 1)],
             balance_changes: vec![(100, 50), (0, 50), (200, 100), (0, 100), (50, 25)],
         },
     );
@@ -373,7 +386,7 @@ fn not_exact_prices() {
     test_swap.test(
         tb,
         Success {
-            nonce_changes: vec![(0, 1), (0, 0), (0, 1), (0, 0), (0, 1)],
+            nonce_changes: vec![(0, 0), (0, 0), (0, 0), (0, 0), (0, 1)],
             balance_changes: vec![(100, 0), (0, 100), (200, 100), (0, 100), (50, 25)],
         },
     );
@@ -407,7 +420,7 @@ fn pay_fee_with_received() {
     test_swap.test(
         tb,
         Success {
-            nonce_changes: vec![(0, 1), (0, 0), (0, 1), (0, 0), (0, 1)],
+            nonce_changes: vec![(0, 0), (0, 0), (0, 0), (0, 0), (0, 1)],
             balance_changes: vec![(100, 50), (0, 50), (200, 100), (0, 100), (50, 25)],
         },
     );
@@ -440,7 +453,7 @@ fn default_recipients() {
     test_swap.test(
         tb,
         Success {
-            nonce_changes: vec![(0, 1), (0, 0), (0, 1), (1, 1), (0, 1)],
+            nonce_changes: vec![(0, 0), (0, 0), (0, 0), (0, 0), (0, 1)],
             balance_changes: vec![(100, 50), (0, 50), (200, 100), (0, 100), (50, 25)],
         },
     );
@@ -474,7 +487,7 @@ fn sign_and_submit() {
     test_swap.test(
         tb,
         Success {
-            nonce_changes: vec![(0, 0), (0, 0), (0, 1), (0, 0), (0, 1)],
+            nonce_changes: vec![(0, 0), (0, 0), (0, 0), (0, 0), (0, 1)],
             balance_changes: vec![(200, 150), (0, 50), (200, 100), (0, 100), (150, 125)],
         },
     );
