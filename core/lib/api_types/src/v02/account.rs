@@ -25,6 +25,7 @@ pub struct Account {
     pub account_id: AccountId,
     pub address: Address,
     pub nonce: Nonce,
+    pub succ: Option<Nonce>,
     pub pub_key_hash: PubKeyHash,
     pub last_update_in_block: BlockNumber,
     pub balances: BTreeMap<String, BigUintSerdeWrapper>,

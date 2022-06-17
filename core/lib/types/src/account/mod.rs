@@ -237,6 +237,27 @@ impl Account {
                 }
             });
     }
+
+    pub fn successor(&self) -> Option<Nonce> {
+        let succ = match self.obsoletes.iter().max() {
+            None => Some(u32::MIN),
+            Some(last) => {
+                let n = self.obsoletes.len() as u32;
+
+                if u32::MAX == n {
+                    None
+                } else if **last == n - 1 {
+                    Some(n)
+                } else {
+                    (u32::MIN..=u32::MAX)
+                        .into_iter()
+                        .find(|i| !self.obsoletes.contains(&Nonce(*i)))
+                }
+            }
+        };
+
+        succ.map(Nonce)
+    }
 }
 
 #[cfg(test)]

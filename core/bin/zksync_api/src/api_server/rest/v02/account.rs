@@ -168,6 +168,7 @@ impl ApiAccountData {
             account_id,
             address: account.address,
             nonce: account.nonce,
+            succ: account.successor(),
             pub_key_hash: account.pub_key_hash,
             last_update_in_block,
             balances,

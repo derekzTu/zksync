@@ -24,6 +24,7 @@ pub struct ResponseAccountState {
     pub nfts: HashMap<TokenId, NFT>,
     pub minted_nfts: HashMap<TokenId, NFT>,
     pub nonce: Nonce,
+    pub succ: Option<Nonce>,
     pub pub_key_hash: PubKeyHash,
 }
 
@@ -74,6 +75,7 @@ impl ResponseAccountState {
             nfts,
             minted_nfts,
             nonce: account.nonce,
+            succ: account.successor(),
             pub_key_hash: account.pub_key_hash,
         })
     }
