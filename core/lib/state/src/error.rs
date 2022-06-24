@@ -19,6 +19,8 @@ pub enum OpError {
     SwapOpError(#[from] SwapOpError),
     #[error(transparent)]
     MintNFTOpError(#[from] MintNFTOpError),
+    #[error(transparent)]
+    EraseOpError(#[from] EraseOpError),
     #[error("The transaction can't be executed in the block because of an invalid timestamp")]
     TimestampError,
 }

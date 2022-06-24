@@ -248,6 +248,8 @@ pub enum TxFeeTypes {
     Swap,
     /// Fee for the `MintNFT` operation.
     MintNFT,
+    /// Fee for the `Erase` operation.
+    Erase,
 }
 
 /// NFT supported in zkSync protocol

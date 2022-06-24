@@ -353,6 +353,7 @@ impl ZkSyncState {
             ZkSyncTx::Swap(tx) => Ok(self.apply_tx(*tx)?),
             ZkSyncTx::MintNFT(tx) => Ok(self.apply_tx(*tx)?),
             ZkSyncTx::WithdrawNFT(tx) => Ok(self.apply_tx(*tx)?),
+            ZkSyncTx::Erase(tx) => Ok(self.apply_tx(*tx)?),
         }
     }
 
@@ -443,6 +444,7 @@ impl ZkSyncState {
             ZkSyncTx::Swap(tx) => Into::into(self.create_op(*tx)?),
             ZkSyncTx::MintNFT(tx) => Into::into(self.create_op(*tx)?),
             ZkSyncTx::WithdrawNFT(tx) => Into::into(self.create_op(*tx)?),
+            ZkSyncTx::Erase(tx) => Into::into(self.create_op(*tx)?),
         })
     }
 

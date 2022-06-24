@@ -11,7 +11,7 @@ use zksync_types::{
         ChangePubKey, ChangePubKeyCREATE2Data, ChangePubKeyECDSAData, ChangePubKeyEthAuthData,
         ChangePubKeyType, PackedEthSignature, TimeRange, TxSignature,
     },
-    AccountId, Address, Close, ForcedExit, MintNFT, Nonce, Order, PubKeyHash, Swap, TokenId,
+    AccountId, Address, Close, Erase, ForcedExit, MintNFT, Nonce, Order, PubKeyHash, Swap, TokenId,
     Transfer, Withdraw, WithdrawNFT,
 };
 
@@ -530,6 +530,37 @@ impl ZkSyncAccount {
         }
 
         change_pubkey
+    }
+
+    pub fn sign_erase(
+        &self,
+        obsolete: Nonce,
+        fee_token: TokenId,
+        fee_token_symbol: &str,
+        fee: BigUint,
+    ) -> (Erase, Option<PackedEthSignature>) {
+        let erase = Erase::new_signed(
+            self.get_account_id()
+                .expect("can't sign tx without account id"),
+            self.address,
+            obsolete,
+            fee,
+            fee_token,
+            &self.private_key,
+        )
+        .expect("Failed to sign erase");
+
+        let eth_signature =
+            if let ZkSyncETHAccountData::EOA { eth_private_key } = &self.eth_account_data {
+                let message = erase.get_ethereum_sign_message(fee_token_symbol, 18);
+                Some(
+                    PackedEthSignature::sign(&eth_private_key, &message.as_bytes())
+                        .expect("Signing the erase unexpectedly failed"),
+                )
+            } else {
+                None
+            };
+        (erase, eth_signature)
     }
 
     pub fn try_get_eth_private_key(&self) -> Option<&H256> {

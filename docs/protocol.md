@@ -26,6 +26,7 @@
   - [9. Change pubkey](#9-change-pubkey)
   - [10. Forced exit](#10-forced-exit)
   - [11. Swap](#11-swap)
+  - [12. Erase](#12-erase)
 - [Smart contracts API](#smart-contracts-api)
   - [Rollup contract](#rollup-contract)
     - [Deposit Ether](#deposit-ether)
@@ -1761,6 +1762,89 @@ def pubdata_invariants():
     OnhcainOp.packed_amount_b == SwapOp.amounts.1
     OnhcainOp.packed_fee == SwapOp.fee
     OnchainOp.nonce_mask == (SwapOp.orders.0.amount != 0) | (SwapOp.orders.1.amount != 0) << 1
+```
+
+### 12. Erase
+
+#### Description
+
+Obsolete a nonce thus cancel the corresponding order (if any).
+
+#### Onchain operation
+
+##### Size
+
+| Chunks | Significant bytes |
+| ------ | ----------------- |
+| 2      | 15                |
+
+##### Structure
+
+| Field      | Byte len | Value/type | Description                                         |
+| ---------- | -------- | ---------- | --------------------------------------------------- |
+| opcode     | 1        | `0x0c`     | Operation code                                      |
+| account    | 4        | AccountId  | Unique identifier of the account                    |
+| nonce      | 4        | Nonce      | Obsolete nonce                                      |
+| fee_token  | 4        | TokenId    | Unique identifier of the token in which paying fees |
+| packed_fee | 2        | PackedFee  | Packed amount of fee paid                           |
+
+##### Example
+
+```
+0c000000050000000a0000000000120000000000
+```
+
+Read as: obsolete nonce 11 from account #5 for fee in packed representation 0x0012 with token #0.
+
+#### User transaction
+
+##### Structure
+
+| Field      | Value/type | Description                                                                |
+| ---------- | ---------- | -------------------------------------------------------------------------- |
+| type       | `0xf3`     | Operation code                                                             |
+| account_id | AccountId  | Unique id of the account in the state tree                                 |
+| account    | ETHAddress | Unique address of the rollup account                                       |
+| nonce      | Nonce      | A one-time code that would be obsoleted                                    |
+| fee        | PackedFee  | Amount of fee paid                                                         |
+| fee_token  | TokenId    | Unique identifier of the token in which paying fees                        |
+| signature  | Signature  | [Signature](#transaction-signature) of previous fields, see the spec below |
+
+#### Rollup operation
+
+##### Structure
+
+| Field | Value/type | Description                            |
+| ----- | ---------- | -------------------------------------- |
+| tx    | TransferTx | Signed erase transaction defined above |
+
+#### Circuit constraints
+
+```python
+# EraseOp - rollup operation described above
+# Block - block where this rollup operation is executed
+# OnchainOp - public data created after executing this rollup operation and posted to the Ethereum
+
+account = get_account_tree(EraseOp.tx.account_id)
+
+def tree_invariants():
+    EraseOp.tx.fee_token < MAX_FUNGIBLE_TOKENS
+
+    account.pubkey_hash == recover_signer_pubkey_hash(EraseOp)
+
+    Erase.tx.nonce not in account.obsoletes
+    account.balance[EraseOp.tx.fee_token] >= EraseOp.tx.fee
+
+def tree_updates():
+    account.balance[EraseOp.tx.fee_token] -= EraseOp.tx.fee
+    account.obsoletes.add(EraseOp.tx.nonce)
+
+def pubdata_invariants():
+    OnchainOp.opcode == 0x0c
+    OnchainOp.account == EraseOp.tx.account_id
+    OnchainOp.nonce = EraseOp.tx.nonce
+    OnchainOp.fee_token = EraseOp.tx.fee_token
+    OnchainOp.packed_fee = EraseOp.tx.fee
 ```
 
 ## Smart contracts API

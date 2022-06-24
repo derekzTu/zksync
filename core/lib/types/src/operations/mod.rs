@@ -9,6 +9,7 @@ use zksync_crypto::params::{CHUNK_BYTES, LEGACY_CHUNK_BYTES};
 mod change_pubkey_op;
 mod close_op;
 mod deposit_op;
+mod erase_op;
 mod error;
 mod forced_exit;
 mod full_exit_op;
@@ -23,10 +24,10 @@ mod withdraw_op;
 #[doc(hidden)]
 pub use self::close_op::CloseOp;
 pub use self::{
-    change_pubkey_op::ChangePubKeyOp, deposit_op::DepositOp, forced_exit::ForcedExitOp,
-    full_exit_op::FullExitOp, mint_nft_op::MintNFTOp, noop_op::NoopOp, swap_op::SwapOp,
-    transfer_op::TransferOp, transfer_to_new_op::TransferToNewOp, withdraw_nft_op::WithdrawNFTOp,
-    withdraw_op::WithdrawOp,
+    change_pubkey_op::ChangePubKeyOp, deposit_op::DepositOp, erase_op::EraseOp,
+    forced_exit::ForcedExitOp, full_exit_op::FullExitOp, mint_nft_op::MintNFTOp, noop_op::NoopOp,
+    swap_op::SwapOp, transfer_op::TransferOp, transfer_to_new_op::TransferToNewOp,
+    withdraw_nft_op::WithdrawNFTOp, withdraw_op::WithdrawOp,
 };
 use crate::operations::error::{PublicDataDecodeError, UnexpectedOperationType};
 
@@ -51,6 +52,7 @@ pub enum ZkSyncOp {
     /// `NoOp` operation cannot be directly created, but it's used to fill the block capacity.
     Noop(NoopOp),
     Swap(Box<SwapOp>),
+    Erase(Box<EraseOp>),
 }
 
 impl ZkSyncOp {
@@ -69,6 +71,7 @@ impl ZkSyncOp {
             ZkSyncOp::Swap(_) => SwapOp::CHUNKS,
             ZkSyncOp::MintNFTOp(_) => MintNFTOp::CHUNKS,
             ZkSyncOp::WithdrawNFT(_) => WithdrawNFTOp::CHUNKS,
+            ZkSyncOp::Erase(_) => EraseOp::CHUNKS,
         }
     }
 
@@ -87,6 +90,7 @@ impl ZkSyncOp {
             ZkSyncOp::Swap(op) => op.get_public_data(),
             ZkSyncOp::MintNFTOp(op) => op.get_public_data(),
             ZkSyncOp::WithdrawNFT(op) => op.get_public_data(),
+            ZkSyncOp::Erase(op) => op.get_public_data(),
         }
     }
 
@@ -156,6 +160,9 @@ impl ZkSyncOp {
             WithdrawNFTOp::OP_CODE => Ok(ZkSyncOp::WithdrawNFT(Box::new(
                 WithdrawNFTOp::from_public_data(&bytes)?,
             ))),
+            EraseOp::OP_CODE => Ok(ZkSyncOp::Erase(Box::new(EraseOp::from_public_data(
+                &bytes,
+            )?))),
             _ => Err(PublicDataDecodeError::UnknownOperationType),
         }
     }
@@ -276,6 +283,7 @@ impl ZkSyncOp {
             ZkSyncOp::Swap(op) => op.get_updated_account_ids(),
             ZkSyncOp::MintNFTOp(op) => op.get_updated_account_ids(),
             ZkSyncOp::WithdrawNFT(op) => op.get_updated_account_ids(),
+            ZkSyncOp::Erase(op) => op.get_updated_account_ids(),
         }
     }
 
@@ -375,5 +383,11 @@ impl From<SwapOp> for ZkSyncOp {
 impl From<WithdrawNFTOp> for ZkSyncOp {
     fn from(op: WithdrawNFTOp) -> Self {
         Self::WithdrawNFT(Box::new(op))
+    }
+}
+
+impl From<EraseOp> for ZkSyncOp {
+    fn from(op: EraseOp) -> Self {
+        Self::Erase(Box::new(op))
     }
 }

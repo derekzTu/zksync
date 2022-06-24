@@ -30,9 +30,9 @@ use zksync_balancer::{Balancer, BuildBalancedItem};
 use zksync_config::{configs::ticker::TokenPriceSource, ZkSyncConfig};
 use zksync_storage::ConnectionPool;
 use zksync_types::{
-    tokens::ChangePubKeyFeeTypeArg, tx::ChangePubKeyType, Address, BatchFee, ChangePubKeyOp, Fee,
-    MintNFTOp, OutputFeeType, SwapOp, Token, TokenId, TokenLike, TransferOp, TransferToNewOp,
-    TxFeeTypes, WithdrawNFTOp, WithdrawOp,
+    tokens::ChangePubKeyFeeTypeArg, tx::ChangePubKeyType, Address, BatchFee, ChangePubKeyOp,
+    EraseOp, Fee, MintNFTOp, OutputFeeType, SwapOp, Token, TokenId, TokenLike, TransferOp,
+    TransferToNewOp, TxFeeTypes, WithdrawNFTOp, WithdrawOp,
 };
 use zksync_utils::ratio_to_big_decimal;
 
@@ -578,6 +578,7 @@ impl<API: FeeTickerAPI, INFO: FeeTickerInfo, WATCHER: TokenWatcher> FeeTicker<AP
                 (OutputFeeType::ChangePubKey(arg), ChangePubKeyOp::CHUNKS)
             }
             TxFeeTypes::MintNFT => (OutputFeeType::MintNFT, MintNFTOp::CHUNKS),
+            TxFeeTypes::Erase => (OutputFeeType::Erase, EraseOp::CHUNKS),
         };
 
         let gas_tx_amount = if matches!(

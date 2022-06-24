@@ -38,6 +38,7 @@ use crate::{
 
 mod change_pubkey_offchain;
 mod deposit;
+mod erase;
 mod forced_exit;
 mod full_exit;
 mod mint_nft;

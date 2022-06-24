@@ -37,6 +37,7 @@ impl CommitCost {
     pub const FORCED_EXIT_COST: u64 = Self::WITHDRAW_COST; // TODO: Verify value (ZKS-109).
     pub const MINT_TOKEN_COST: u64 = 920;
     pub const SWAP_COST: u64 = 710;
+    pub const ERASE_COST: u64 = 300;
 
     pub fn base_cost() -> U256 {
         U256::from(Self::BASE_COST)
@@ -74,6 +75,7 @@ impl CommitCost {
             ZkSyncOp::MintNFTOp(_) => Self::MINT_TOKEN_COST,
             ZkSyncOp::Close(_) => unreachable!("Close operations are disabled"),
             ZkSyncOp::WithdrawNFT(_) => Self::WITHDRAW_NFT_COST,
+            ZkSyncOp::Erase(_) => Self::ERASE_COST,
         };
 
         U256::from(cost)
@@ -101,6 +103,7 @@ impl VerifyCost {
     pub const FORCED_EXIT_COST: u64 = Self::WITHDRAW_COST; // TODO: Verify value (ZKS-109).
     pub const MINT_NFT_COST: u64 = 0;
     pub const WITHDRAW_NFT_COST: u64 = 200_000;
+    pub const ERASE_COST: u64 = 0;
 
     pub fn base_cost() -> U256 {
         U256::from(Self::BASE_COST)
@@ -120,6 +123,7 @@ impl VerifyCost {
             ZkSyncOp::Swap(_) => Self::SWAP_COST,
             ZkSyncOp::Close(_) => unreachable!("Close operations are disabled"),
             ZkSyncOp::WithdrawNFT(_) => Self::WITHDRAW_NFT_COST,
+            ZkSyncOp::Erase(_) => Self::ERASE_COST,
         };
 
         U256::from(cost)

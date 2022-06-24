@@ -12,8 +12,8 @@ use zksync_types::{
     operations::ZkSyncOp,
     priority_ops::{PriorityOp, ZkSyncPriorityOp},
     tx::{ChangePubKey, Close, ForcedExit, Swap, Transfer, Withdraw, WithdrawNFT, ZkSyncTx},
-    AccountId, AccountMap, AccountTree, AccountUpdates, Address, BlockNumber, MintNFT, SerialId,
-    TokenId, H256, NFT,
+    AccountId, AccountMap, AccountTree, AccountUpdates, Address, BlockNumber, Erase, MintNFT,
+    SerialId, TokenId, H256, NFT,
 };
 
 /// Rollup accounts states
@@ -432,6 +432,31 @@ impl TreeState {
                         fee,
                         updates,
                         executed_op: ZkSyncOp::WithdrawNFT(op),
+                    };
+                    current_op_block_index = self.update_from_tx(
+                        tx,
+                        tx_result,
+                        &mut fees,
+                        &mut accounts_updated,
+                        current_op_block_index,
+                        &mut ops,
+                    );
+                }
+                ZkSyncOp::Erase(mut op) => {
+                    let account = self
+                        .state
+                        .get_account(op.tx.account_id)
+                        .ok_or_else(|| format_err!("Erase fail: Nonexistent account"))?;
+                    op.tx.account = account.address;
+
+                    let tx = ZkSyncTx::Erase(Box::new(op.tx.clone()));
+                    let (fee, updates) =
+                        <ZkSyncState as TxHandler<Erase>>::apply_op(&mut self.state, &op)
+                            .map_err(|e| format_err!("Erase fail: {}", e))?;
+                    let tx_result = OpSuccess {
+                        fee,
+                        updates,
+                        executed_op: ZkSyncOp::Erase(op),
                     };
                     current_op_block_index = self.update_from_tx(
                         tx,

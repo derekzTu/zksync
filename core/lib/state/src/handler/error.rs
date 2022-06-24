@@ -204,3 +204,19 @@ pub enum SwapOpError {
     #[error("Self-swap is not allowed")]
     SelfSwap,
 }
+
+#[derive(Clone, Debug, Error, PartialEq)]
+pub enum EraseOpError {
+    #[error("Account not found")]
+    AccountNotFound,
+    #[error("Account is locked")]
+    AccountIsLocked,
+    #[error("Nonce obsolete")]
+    NonceObsolete,
+    #[error("Not enough balance")]
+    InsufficientBalance,
+    #[error("Invalid token id")]
+    InvalidTokenId,
+    #[error("Erase signature is incorrect")]
+    InvalidSignature,
+}

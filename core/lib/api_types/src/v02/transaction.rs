@@ -8,7 +8,7 @@ use zksync_types::{
         ChangePubKey, Close, EthBatchSignatures, ForcedExit, MintNFT, Swap, Transfer,
         TxEthSignature, TxHash, Withdraw, WithdrawNFT,
     },
-    AccountId, Address, BlockNumber, EthBlockId, PubKeyHash, SerialId, TokenId, ZkSyncOp,
+    AccountId, Address, BlockNumber, Erase, EthBlockId, PubKeyHash, SerialId, TokenId, ZkSyncOp,
     ZkSyncPriorityOp, H256,
 };
 use zksync_utils::{BigUintSerdeAsRadix10Str, ZeroPrefixHexSerde};
@@ -103,6 +103,7 @@ pub enum L2Transaction {
     MintNFT(Box<MintNFT>),
     Swap(Box<Swap>),
     WithdrawNFT(Box<WithdrawNFTData>),
+    Erase(Box<Erase>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -169,6 +169,8 @@ pub enum PublicDataDecodeError {
     MintNFTOpError(#[from] MintNFTOpError),
     #[error(transparent)]
     WithdrawNFTOpError(#[from] WithdrawNFTOpError),
+    #[error(transparent)]
+    EraseOpError(#[from] EraseOpError),
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -185,6 +187,20 @@ pub enum SwapOpError {
     CannotGetTokenId,
     #[error("Failed to get amount")]
     CannotGetAmount,
+    #[error("Failed to get Fee")]
+    CannotGetFee,
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum EraseOpError {
+    #[error("Wrong bytes length for erase pubdata")]
+    PubdataSizeMismatch,
+    #[error("Failed to get account id")]
+    CannotGetAccountId,
+    #[error("Failed to get obsolete")]
+    CannotGetObsolete,
+    #[error("Failed to get token id")]
+    CannotGetTokenId,
     #[error("Failed to get Fee")]
     CannotGetFee,
 }

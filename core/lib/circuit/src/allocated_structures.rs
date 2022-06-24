@@ -89,7 +89,7 @@ impl<E: RescueEngine> AllocatedOperationBranch<E> {
             || operation_branch.obsolete.grab(),
             franklin_constants::obsolete_tree_depth(),
         )?;
-        let obsolete = obsolete.pad(franklin_constants::OBSOLETE_BIT_WIDTH);
+        let obsolete = obsolete.pad(franklin_constants::NONCE_BIT_WIDTH);
         let signal_audit_path = utils::allocate_numbers_vec(
             cs.namespace(|| "signal_audit_path"),
             &operation_branch.witness.signal_subtree_path,

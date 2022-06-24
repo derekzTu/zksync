@@ -6,6 +6,7 @@ mod invariant;
 mod change_pubkey;
 mod close;
 mod deposit;
+mod erase;
 pub mod error;
 mod forced_exit;
 mod full_exit;

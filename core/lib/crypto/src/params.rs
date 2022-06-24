@@ -118,7 +118,6 @@ pub const INPUT_DATA_ROOT_HASH_BYTES_WIDTH: usize = 32;
 
 pub const LEGACY_TOKEN_BIT_WIDTH: usize = 16;
 pub const TOKEN_BIT_WIDTH: usize = 32;
-pub const OBSOLETE_BIT_WIDTH: usize = 32;
 pub const TX_TYPE_BIT_WIDTH: usize = 8;
 
 pub const TX_VERSION_FOR_SIGNATURE_BIT_WIDTH: usize = 8;
@@ -333,6 +332,15 @@ pub const OLD2_SIGNED_CHANGE_PUBKEY_BIT_WIDTH: usize = TX_TYPE_BIT_WIDTH
     + FEE_MANTISSA_BIT_WIDTH
     + NONCE_BIT_WIDTH
     + 2 * TIMESTAMP_BIT_WIDTH;
+
+pub const SIGNED_ERASE_BIT_WIDTH: usize = TX_TYPE_BIT_WIDTH
+    + TX_VERSION_FOR_SIGNATURE_BIT_WIDTH
+    + ACCOUNT_ID_BIT_WIDTH
+    + ADDRESS_WIDTH
+    + NONCE_BIT_WIDTH
+    + TOKEN_BIT_WIDTH
+    + FEE_EXPONENT_BIT_WIDTH
+    + FEE_MANTISSA_BIT_WIDTH;
 
 /// Number of inputs in the basic circuit that is aggregated by recursive circuit
 pub const RECURSIVE_CIRCUIT_NUM_INPUTS: usize = 1;

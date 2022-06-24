@@ -115,6 +115,12 @@ impl Corrupted for (ZkSyncTx, Option<PackedEthSignature>) {
                     .as_bytes()
                     .to_vec()
             }
+            ZkSyncTx::Erase(tx) => {
+                tx.signature = TxSignature::sign_musig(&zksync_pk, &tx.get_bytes());
+                tx.get_ethereum_sign_message(token_symbol, decimals)
+                    .as_bytes()
+                    .to_vec()
+            }
         };
 
         if let Some(eth_sig) = &mut self.1 {
@@ -166,6 +172,9 @@ impl Corrupted for (ZkSyncTx, Option<PackedEthSignature>) {
             ZkSyncTx::WithdrawNFT(tx) => {
                 tx.signature = bad_signature;
             }
+            ZkSyncTx::Erase(tx) => {
+                tx.signature = bad_signature;
+            }
         }
         self
     }
@@ -193,6 +202,9 @@ impl Corrupted for (ZkSyncTx, Option<PackedEthSignature>) {
                 tx.fee_token = bad_token;
             }
             ZkSyncTx::WithdrawNFT(tx) => {
+                tx.fee_token = bad_token;
+            }
+            ZkSyncTx::Erase(tx) => {
                 tx.fee_token = bad_token;
             }
         }
@@ -224,6 +236,7 @@ impl Corrupted for (ZkSyncTx, Option<PackedEthSignature>) {
             ZkSyncTx::MintNFT(_) => unreachable!("MintNFT doesn't have amount"),
             ZkSyncTx::WithdrawNFT(_) => unreachable!("WithdrawNFT doesn't have amount"),
             ZkSyncTx::Close(_tx) => unreachable!(),
+            ZkSyncTx::Erase(_tx) => unreachable!("Erase doesn't have amount"),
         }
         self.resign(eth_pk, token_symbol, decimals);
 
@@ -257,6 +270,9 @@ impl Corrupted for (ZkSyncTx, Option<PackedEthSignature>) {
             ZkSyncTx::WithdrawNFT(tx) => {
                 tx.fee = bad_fee;
             }
+            ZkSyncTx::Erase(tx) => {
+                tx.fee = bad_fee;
+            }
         }
         self.resign(eth_pk, token_symbol, decimals);
 
@@ -281,6 +297,7 @@ impl Corrupted for (ZkSyncTx, Option<PackedEthSignature>) {
             ZkSyncTx::Close(_tx) => unreachable!(),
             ZkSyncTx::MintNFT(_) => unreachable!("MintNFT doesn't have amount"),
             ZkSyncTx::WithdrawNFT(_) => unreachable!("WithdrawNFT doesn't have amount"),
+            ZkSyncTx::Erase(_) => unreachable!("Erase doesn't have amount"),
         }
         self.resign(eth_pk, token_symbol, decimals);
 
@@ -310,6 +327,9 @@ impl Corrupted for (ZkSyncTx, Option<PackedEthSignature>) {
                 tx.fee = zero_fee;
             }
             ZkSyncTx::WithdrawNFT(tx) => {
+                tx.fee = zero_fee;
+            }
+            ZkSyncTx::Erase(tx) => {
                 tx.fee = zero_fee;
             }
         }

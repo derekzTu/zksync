@@ -809,6 +809,7 @@ impl ZkSyncStateKeeper {
             ZkSyncTx::MintNFT(_) => Default::default(),
             ZkSyncTx::Swap(tx) => tx.time_range(),
             ZkSyncTx::WithdrawNFT(tx) => tx.time_range,
+            ZkSyncTx::Erase(_) => Default::default(),
         };
         if !time_range.is_valid(block_timestamp) {
             return Err(OpError::TimestampError);

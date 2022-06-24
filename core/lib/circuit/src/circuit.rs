@@ -19,14 +19,14 @@ use zksync_crypto::franklin_crypto::{
 // Workspace deps
 use zksync_crypto::params::{
     self, CONTENT_HASH_WIDTH, FR_BIT_WIDTH_PADDED, NFT_STORAGE_ACCOUNT_ID, NFT_TOKEN_ID,
-    SIGNED_FORCED_EXIT_BIT_WIDTH, SIGNED_MINT_NFT_BIT_WIDTH, SIGNED_TRANSFER_BIT_WIDTH,
-    SIGNED_WITHDRAW_NFT_BIT_WIDTH,
+    SIGNED_ERASE_BIT_WIDTH, SIGNED_FORCED_EXIT_BIT_WIDTH, SIGNED_MINT_NFT_BIT_WIDTH,
+    SIGNED_TRANSFER_BIT_WIDTH, SIGNED_WITHDRAW_NFT_BIT_WIDTH,
 };
 use zksync_types::{
     operations::{ChangePubKeyOp, NoopOp},
     tx::Order,
-    CloseOp, DepositOp, ForcedExitOp, FullExitOp, MintNFTOp, SwapOp, TransferOp, TransferToNewOp,
-    WithdrawNFTOp, WithdrawOp,
+    CloseOp, DepositOp, EraseOp, ForcedExitOp, FullExitOp, MintNFTOp, SwapOp, TransferOp,
+    TransferToNewOp, WithdrawNFTOp, WithdrawOp,
 };
 // Local deps
 use crate::{
@@ -45,7 +45,7 @@ use crate::{
     },
 };
 
-const DIFFERENT_TRANSACTIONS_TYPE_NUMBER: usize = 12;
+const DIFFERENT_TRANSACTIONS_TYPE_NUMBER: usize = 13;
 pub struct ZkSyncCircuit<'a, E: RescueEngine + JubjubEngine> {
     pub rescue_params: &'a <E as RescueEngine>::Params,
     pub jubjub_params: &'a <E as JubjubEngine>::Params,
@@ -226,7 +226,8 @@ impl<'a, E: RescueEngine + JubjubEngine> Circuit<E> for ZkSyncCircuit<'a, E> {
             data[ForcedExitOp::OP_CODE as usize] = vec![zero.clone(); 2];
             data[MintNFTOp::OP_CODE as usize] = vec![zero.clone(); 2];
             data[WithdrawNFTOp::OP_CODE as usize] = vec![zero.clone(); 4];
-            data[SwapOp::OP_CODE as usize] = vec![zero; 2];
+            data[SwapOp::OP_CODE as usize] = vec![zero.clone(); 2];
+            data[EraseOp::OP_CODE as usize] = vec![zero; 1];
 
             // this operation is disabled for now
             // data[CloseOp::OP_CODE as usize] = vec![];
@@ -1221,6 +1222,17 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
                 &mut previous_pubdatas[SwapOp::OP_CODE as usize],
                 is_special_nft_storage_account,
                 is_special_nft_token,
+            )?,
+            self.erase(
+                cs.namespace(|| "erase"),
+                &mut cur,
+                &lhs,
+                global_variables,
+                &is_a_geq_b,
+                &op_data,
+                &ext_pubdata_chunk,
+                &signature_data.is_verified,
+                &mut previous_pubdatas[EraseOp::OP_CODE as usize],
             )?,
         ];
 
@@ -3875,6 +3887,152 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
         Ok(correct)
     }
 
+    fn erase<CS: ConstraintSystem<E>>(
+        &self,
+        mut cs: CS,
+        cur: &mut AllocatedOperationBranch<E>,
+        lhs: &AllocatedOperationBranch<E>,
+        global_variables: &CircuitGlobalVariables<E>,
+        is_a_geq_b: &Boolean,
+        op_data: &AllocatedOperationData<E>,
+        ext_pubdata_chunk: &AllocatedNum<E>,
+        is_sig_verified: &Boolean,
+        pubdata_holder: &mut Vec<AllocatedNum<E>>,
+    ) -> Result<Boolean, SynthesisError> {
+        assert!(
+            !pubdata_holder.is_empty(),
+            "pubdata holder has to be preallocated"
+        );
+
+        let mut common_valid_flags = vec![is_sig_verified.clone()];
+
+        let is_erase = Boolean::from(Expression::equals(
+            cs.namespace(|| "is_erase"),
+            &global_variables.chunk_data.tx_type.get_number(),
+            Expression::u64::<CS>(u64::from(EraseOp::OP_CODE)),
+        )?);
+        common_valid_flags.push(is_erase);
+
+        let is_chunk_number = (0..EraseOp::CHUNKS as u64)
+            .map(|num| {
+                Ok(Boolean::from(Expression::equals(
+                    cs.namespace(|| format!("is chunk number {}", num)),
+                    &global_variables.chunk_data.chunk_number,
+                    Expression::u64::<CS>(num),
+                )?))
+            })
+            .collect::<Result<Vec<_>, SynthesisError>>()?;
+
+        let mut pubdata_bits = vec![];
+        pubdata_bits.extend(global_variables.chunk_data.tx_type.get_bits_be());
+        pubdata_bits.extend(lhs.account_id.get_bits_be());
+        pubdata_bits.extend(lhs.obsolete.get_bits_be());
+        pubdata_bits.extend(lhs.token.get_bits_be());
+        pubdata_bits.extend(op_data.fee_packed.get_bits_be());
+
+        resize_grow_only(
+            &mut pubdata_bits,
+            EraseOp::CHUNKS * params::CHUNK_BIT_WIDTH,
+            Boolean::Constant(false),
+        );
+
+        let (is_equal_pubdata, packed_pubdata) = vectorized_compare(
+            cs.namespace(|| "compare pubdata"),
+            &*pubdata_holder,
+            &pubdata_bits,
+        )?;
+        let pubdata_properly_copied = boolean_or(
+            cs.namespace(|| "first chunk or pubdata is copied properly"),
+            &is_chunk_number[0],
+            &is_equal_pubdata,
+        )?;
+        common_valid_flags.push(pubdata_properly_copied);
+
+        *pubdata_holder = packed_pubdata;
+
+        let pubdata_chunk = select_pubdata_chunk(
+            cs.namespace(|| "select_pubdata_chunk"),
+            &pubdata_bits,
+            &global_variables.chunk_data.chunk_number,
+            EraseOp::CHUNKS,
+        )?;
+        let is_pubdata_chunk_correct = Boolean::from(Expression::equals(
+            cs.namespace(|| "is_pubdata_chunk_correct"),
+            &pubdata_chunk,
+            ext_pubdata_chunk,
+        )?);
+        common_valid_flags.push(is_pubdata_chunk_correct);
+
+        let mut serialized_tx_bits = vec![];
+        serialized_tx_bits.extend(reversed_tx_type_bits_be(EraseOp::OP_CODE));
+        serialized_tx_bits.extend(u8_into_bits_be(params::CURRENT_TX_VERSION));
+        serialized_tx_bits.extend(lhs.account_id.get_bits_be());
+        serialized_tx_bits.extend(lhs.account.address.get_bits_be());
+        serialized_tx_bits.extend(lhs.obsolete.get_bits_be());
+        serialized_tx_bits.extend(lhs.token.get_bits_be());
+        serialized_tx_bits.extend(op_data.fee_packed.get_bits_be());
+        assert_eq!(serialized_tx_bits.len(), SIGNED_ERASE_BIT_WIDTH);
+
+        let is_serialized_erase_correct = verify_signature_message_construction(
+            cs.namespace(|| "is_serialized_tx_correct"),
+            serialized_tx_bits,
+            &op_data,
+        )?;
+        common_valid_flags.push(is_serialized_erase_correct);
+
+        let is_common_valid = multi_and(cs.namespace(|| "is_common_valid"), &common_valid_flags)?;
+
+        let is_a_correct =
+            CircuitElement::equals(cs.namespace(|| "is_a_correct"), &op_data.a, &cur.balance)?;
+        let is_b_correct =
+            CircuitElement::equals(cs.namespace(|| "is_b_correct"), &op_data.b, &op_data.fee)?;
+        let is_obsolete_correct = CircuitElement::equals(
+            cs.namespace(|| "is signal clear"),
+            &cur.signal,
+            &global_variables.explicit_zero,
+        )?;
+
+        let lhs_valid = multi_and(
+            cs.namespace(|| "lhs_valid"),
+            &[
+                is_chunk_number[0].clone(),
+                is_common_valid.clone(),
+                is_a_correct,
+                is_b_correct,
+                is_a_geq_b.clone(),
+                is_obsolete_correct,
+            ],
+        )?;
+
+        let updated_balance = Expression::from(&cur.balance.get_number())
+            - Expression::from(&op_data.fee.get_number());
+
+        cur.balance = CircuitElement::conditionally_select_with_number_strict(
+            cs.namespace(|| "update cur balance"),
+            updated_balance,
+            &cur.balance,
+            &lhs_valid,
+        )?;
+        cur.signal = CircuitElement::conditionally_select_with_number_strict(
+            cs.namespace(|| "update signal"),
+            Expression::constant::<CS>(E::Fr::one()),
+            &cur.signal,
+            &lhs_valid,
+        )?;
+
+        let rhs_valid = multi_and(
+            cs.namespace(|| "rhs_valid"),
+            &[is_chunk_number[1].clone(), is_common_valid.clone()],
+        )?;
+        let correct = Boolean::xor(
+            cs.namespace(|| "lhs_valid ^ rhs_valid"),
+            &lhs_valid,
+            &rhs_valid,
+        )?;
+
+        Ok(correct)
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn transfer<CS: ConstraintSystem<E>>(
         &self,
@@ -5052,6 +5210,7 @@ fn generate_maxchunk_polynomial<E: JubjubEngine>() -> Vec<E::Fr> {
         get_xy(MintNFTOp::OP_CODE, MintNFTOp::CHUNKS),
         get_xy(WithdrawNFTOp::OP_CODE, WithdrawNFTOp::CHUNKS),
         get_xy(SwapOp::OP_CODE, SwapOp::CHUNKS),
+        get_xy(EraseOp::OP_CODE, EraseOp::CHUNKS),
     ];
     let interpolation = interpolate::<E>(&points[..]).expect("must interpolate");
     assert_eq!(interpolation.len(), DIFFERENT_TRANSACTIONS_TYPE_NUMBER);

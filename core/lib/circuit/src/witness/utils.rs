@@ -19,7 +19,10 @@ use zksync_crypto::{
         utils::{be_bit_vector_into_bytes, le_bit_vector_into_field_element},
     },
     merkle_tree::{hasher::Hasher, RescueHasher},
-    params::{used_account_subtree_depth, CHUNK_BIT_WIDTH, MAX_CIRCUIT_MSG_HASH_BITS},
+    params::{
+        number_of_processable_tokens, used_account_subtree_depth, CHUNK_BIT_WIDTH,
+        MAX_CIRCUIT_MSG_HASH_BITS,
+    },
     primitives::GetBits,
     Engine,
 };
@@ -31,13 +34,13 @@ use zksync_types::{
         WithdrawNFTOp, WithdrawOp,
     },
     tx::{Order, PackedPublicKey, TxVersion},
-    AccountId, BlockNumber, ZkSyncOp,
+    AccountId, BlockNumber, EraseOp, ZkSyncOp,
 };
 // Local deps
 use crate::witness::{
-    ChangePubkeyOffChainWitness, CloseAccountWitness, DepositWitness, ForcedExitWitness,
-    FullExitWitness, MintNFTWitness, SwapWitness, TransferToNewWitness, TransferWitness,
-    WithdrawNFTWitness, WithdrawWitness, Witness,
+    ChangePubkeyOffChainWitness, CloseAccountWitness, DepositWitness, EraseWitness,
+    ForcedExitWitness, FullExitWitness, MintNFTWitness, SwapWitness, TransferToNewWitness,
+    TransferWitness, WithdrawNFTWitness, WithdrawWitness, Witness,
 };
 use crate::{
     account::AccountWitness,
@@ -45,8 +48,6 @@ use crate::{
     operation::{Operation, SignatureData},
     utils::sign_rescue,
 };
-
-use zksync_crypto::params::number_of_processable_tokens;
 
 macro_rules! get_bytes {
     ($tx:ident) => {
@@ -731,6 +732,20 @@ impl SigDataInput {
         )
     }
 
+    pub fn from_erase_op(erase_op: &EraseOp) -> Result<Self, anyhow::Error> {
+        let sign_packed = erase_op
+            .tx
+            .signature
+            .signature
+            .serialize_packed()
+            .expect("signature serialize");
+        SigDataInput::new(
+            &sign_packed,
+            &erase_op.tx.get_bytes(),
+            &erase_op.tx.signature.pub_key,
+        )
+    }
+
     /// Provides a vector of copies of this `SigDataInput` object, all with one field
     /// set to incorrect value.
     /// Used for circuit tests.
@@ -977,6 +992,20 @@ pub fn build_block_witness<'a>(
                 });
                 pub_data.extend(withdraw_nft_witness.get_pubdata());
                 offset_commitment.extend(withdraw_nft_witness.get_offset_commitment_data())
+            }
+            ZkSyncOp::Erase(erase) => {
+                let erase_witness = EraseWitness::apply_tx(&mut witness_accum.account_tree, &erase);
+
+                let input = SigDataInput::from_erase_op(&erase)?;
+                let erase_operations = erase_witness.calculate_operations(input);
+
+                operations.extend(erase_operations);
+                fees.push(CollectedFee {
+                    token: erase.tx.fee_token,
+                    amount: erase.tx.fee,
+                });
+                pub_data.extend(erase_witness.get_pubdata());
+                offset_commitment.extend(erase_witness.get_offset_commitment_data())
             }
         }
     }

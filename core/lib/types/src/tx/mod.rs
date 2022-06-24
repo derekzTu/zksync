@@ -2,6 +2,7 @@
 
 mod change_pubkey;
 mod close;
+mod erase;
 mod forced_exit;
 mod mint_nft;
 mod primitives;
@@ -24,6 +25,7 @@ pub use self::{
         ChangePubKey, ChangePubKeyCREATE2Data, ChangePubKeyECDSAData, ChangePubKeyEthAuthData,
         ChangePubKeyType,
     },
+    erase::Erase,
     forced_exit::ForcedExit,
     mint_nft::{calculate_token_address, calculate_token_data, calculate_token_hash, MintNFT},
     swap::{Order, Swap},

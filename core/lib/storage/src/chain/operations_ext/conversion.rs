@@ -80,6 +80,7 @@ impl StorageTxData {
                 eth_tx_hash: complete_withdrawals_tx_hash,
             })),
             ZkSyncTx::Swap(tx) => L2Transaction::Swap(tx),
+            ZkSyncTx::Erase(tx) => L2Transaction::Erase(tx),
         };
         TransactionData::L2(tx)
     }
