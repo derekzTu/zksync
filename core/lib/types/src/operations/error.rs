@@ -187,8 +187,10 @@ pub enum SwapOpError {
     CannotGetTokenId,
     #[error("Failed to get amount")]
     CannotGetAmount,
-    #[error("Failed to get Fee")]
+    #[error("Failed to get fee")]
     CannotGetFee,
+    #[error("Failed to get nonce")]
+    CannotGetNonce,
 }
 
 #[derive(Debug, Error, PartialEq)]

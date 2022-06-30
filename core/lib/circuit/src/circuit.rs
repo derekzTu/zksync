@@ -3276,6 +3276,15 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
 
         pubdata_bits.extend(nonce_mask.get_bits_be());
 
+        pubdata_bits.extend(
+            op_data
+                .special_nonces
+                .iter()
+                .take(2)
+                .map(|n| n.get_bits_be())
+                .flatten(),
+        );
+
         resize_grow_only(
             &mut pubdata_bits,
             SwapOp::CHUNKS * params::CHUNK_BIT_WIDTH,
@@ -3458,18 +3467,23 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
         // account id enforcement
         // order in special accounts: account0, recipient0, account1, recipient1, submitter
         // order in chunks:           account0, recipient1, account1, recipient0, submitter
-        let is_account_id_correct_in_slot = (0..5)
+        let is_account_id_correct_in_slot = (0..6)
             .map(|num| {
-                let permutation = [0, 3, 2, 1, 4];
+                let permutation = [0, 3, 2, 1, 4, 4];
                 let account_id_correct = CircuitElement::equals(
-                    cs.namespace(|| format!("is_account_id_correct_in_slot {}", num)),
+                    cs.namespace(|| {
+                        format!(
+                            "is_account_id_correct_in_slot {} ({})",
+                            permutation[num], num
+                        )
+                    }),
                     &cur.account_id,
-                    &op_data.special_accounts[num],
+                    &op_data.special_accounts[permutation[num]],
                 )?;
                 Boolean::and(
-                    cs.namespace(|| format!("is account id correct in chunk {}", permutation[num])),
+                    cs.namespace(|| format!("is account id correct in chunk {}", num)),
                     &account_id_correct,
-                    &is_chunk_number[permutation[num]],
+                    &is_chunk_number[num],
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -3482,7 +3496,7 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
         // token enforcement
         // order in special_tokens: token_sell, token_buy, fee_token
         // order in chunks:         token_sell, token_sell, token_buy, token_buy, fee_token
-        let is_token_correct_in_chunk = (0..5)
+        let is_token_correct_in_chunk = (0..6)
             .map(|num| {
                 let token_correct = CircuitElement::equals(
                     cs.namespace(|| format!("is_token_correct_in_slot {}", num)),
@@ -3729,10 +3743,13 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
             ],
         )?;
 
-        let is_rhs_chunk = boolean_or(
+        let is_rhs_chunk = multi_or(
             cs.namespace(|| "is rhs chunk"),
-            &is_chunk_number[1],
-            &is_chunk_number[3],
+            &[
+                is_chunk_number[1].clone(),
+                is_chunk_number[3].clone(),
+                is_chunk_number[5].clone(),
+            ],
         )?;
 
         let is_serialized_swap_correct = verify_signature_message_construction(
@@ -3869,12 +3886,18 @@ impl<'a, E: RescueEngine + JubjubEngine> ZkSyncCircuit<'a, E> {
         let updated_balance = Expression::from(&cur.balance.get_number())
             + Expression::from(&amount_unpacked.get_number());
 
+        let is_recipient = Boolean::and(
+            cs.namespace(|| "is recipient"),
+            &rhs_valid,
+            &is_chunk_number[5].not(),
+        )?;
+
         //update balance
         cur.balance = CircuitElement::conditionally_select_with_number_strict(
             cs.namespace(|| "updated_balance rhs"),
             updated_balance,
             &cur.balance,
-            &rhs_valid,
+            &is_recipient,
         )?;
 
         // Either LHS xor RHS are correct (due to chunking at least)

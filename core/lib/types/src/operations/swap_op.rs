@@ -2,7 +2,7 @@ use num::{BigUint, Zero};
 use serde::{Deserialize, Serialize};
 use zksync_crypto::params::{
     ACCOUNT_ID_BIT_WIDTH, AMOUNT_EXPONENT_BIT_WIDTH, AMOUNT_MANTISSA_BIT_WIDTH, CHUNK_BYTES,
-    FEE_EXPONENT_BIT_WIDTH, FEE_MANTISSA_BIT_WIDTH, TOKEN_BIT_WIDTH,
+    FEE_EXPONENT_BIT_WIDTH, FEE_MANTISSA_BIT_WIDTH, NONCE_BIT_WIDTH, TOKEN_BIT_WIDTH,
 };
 use zksync_crypto::primitives::FromBytes;
 
@@ -23,7 +23,7 @@ pub struct SwapOp {
 }
 
 impl SwapOp {
-    pub const CHUNKS: usize = 5;
+    pub const CHUNKS: usize = 6;
     pub const OP_CODE: u8 = 0x0b;
 
     pub(crate) fn get_public_data(&self) -> Vec<u8> {
@@ -52,6 +52,8 @@ impl SwapOp {
         let nonce_mask = (!self.tx.orders.0.amount.is_zero() as u8)
             + (!self.tx.orders.1.amount.is_zero() as u8) * 2;
         data.push(nonce_mask);
+        data.extend_from_slice(&self.tx.orders.0.nonce.to_be_bytes());
+        data.extend_from_slice(&self.tx.orders.1.nonce.to_be_bytes());
         data.resize(Self::CHUNKS * CHUNK_BYTES, 0x00);
         data
     }
@@ -69,6 +71,7 @@ impl SwapOp {
         let amounts_offset = tokens_offset + ACCOUNT_ID_BIT_WIDTH * 3 / 8;
         let fee_offset = amounts_offset + AMOUNT_BIT_WIDTH * 2 / 8;
         let masks_offset = fee_offset + FEE_BIT_WIDTH / 8;
+        let nonces_offset = masks_offset + 2;
 
         let read_token = |offset| {
             u32::from_bytes(&bytes[offset..offset + TOKEN_BIT_WIDTH / 8])
@@ -83,6 +86,11 @@ impl SwapOp {
         let read_amount = |offset| {
             unpack_token_amount(&bytes[offset..offset + AMOUNT_BIT_WIDTH / 8])
                 .ok_or(SwapOpError::CannotGetAmount)
+        };
+
+        let read_nonce = |offset| {
+            u32::from_bytes(&bytes[offset..offset + NONCE_BIT_WIDTH / 8])
+                .ok_or(SwapOpError::CannotGetNonce)
         };
 
         let fee = unpack_fee_amount(&bytes[fee_offset..fee_offset + FEE_BIT_WIDTH / 8])
@@ -106,10 +114,12 @@ impl SwapOp {
         let nonce = Nonce(0); // It is unknown from pubdata
         let earnest = (bytes[masks_offset] & 1) != 0;
         let nonce_mask = bytes[masks_offset + 1];
+        let nonce_0 = Nonce(read_nonce(nonces_offset)?);
+        let nonce_1 = Nonce(read_nonce(nonces_offset + NONCE_BIT_WIDTH / 8)?);
 
         let order_a = Order {
             account_id: account_id_0,
-            nonce,
+            nonce: nonce_0,
             recipient_address: Address::zero(), // unknown from pubdata
             // First bit indicates whether this amount is 0 or not.
             amount: amount_0.clone() * (nonce_mask & 1),
@@ -126,7 +136,7 @@ impl SwapOp {
 
         let order_b = Order {
             account_id: account_id_1,
-            nonce,
+            nonce: nonce_1,
             recipient_address: Address::zero(), // unknown from pubdata
             // Second bit indicates whether this amount is 0 or not,
             // there're only 2 bits in total.

@@ -8,6 +8,7 @@ use zksync_crypto::franklin_crypto::{
     rescue::RescueEngine,
 };
 // Workspace deps
+use zksync_crypto::params::NONCE_BIT_WIDTH;
 use zksync_crypto::{
     circuit::{
         account::CircuitAccountTree,
@@ -60,7 +61,7 @@ pub struct SwapData {
 pub struct SwapWitness<E: RescueEngine> {
     pub accounts: (Vec<OperationBranch<E>>, Vec<OperationBranch<E>>),
     pub recipients: (Vec<OperationBranch<E>>, Vec<OperationBranch<E>>),
-    pub submitter: OperationBranch<E>,
+    pub submitter: (OperationBranch<E>, OperationBranch<E>),
     pub args: OperationArguments<E>,
     pub roots: Vec<Option<E::Fr>>,
     pub tx_type: Option<E::Fr>,
@@ -146,7 +147,7 @@ impl Witness for SwapWitness<Bn256> {
         );
         append_be_fixed_width(
             &mut pubdata_bits,
-            &self.submitter.address.unwrap(),
+            &self.submitter.0.address.unwrap(),
             ACCOUNT_ID_BIT_WIDTH,
         );
         append_be_fixed_width(
@@ -161,7 +162,7 @@ impl Witness for SwapWitness<Bn256> {
         );
         append_be_fixed_width(
             &mut pubdata_bits,
-            &self.submitter.token.unwrap(),
+            &self.submitter.0.token.unwrap(),
             TOKEN_BIT_WIDTH,
         );
         append_be_fixed_width(
@@ -181,6 +182,16 @@ impl Witness for SwapWitness<Bn256> {
         );
         append_be_fixed_width(&mut pubdata_bits, &self.earnest_mask(), 8);
         append_be_fixed_width(&mut pubdata_bits, &self.nonce_mask(), 8);
+        append_be_fixed_width(
+            &mut pubdata_bits,
+            &self.args.special_nonces[0].unwrap(),
+            NONCE_BIT_WIDTH,
+        );
+        append_be_fixed_width(
+            &mut pubdata_bits,
+            &self.args.special_nonces[1].unwrap(),
+            NONCE_BIT_WIDTH,
+        );
 
         resize_grow_only(&mut pubdata_bits, SwapOp::CHUNKS * CHUNK_BIT_WIDTH, false);
         pubdata_bits
@@ -293,8 +304,27 @@ impl Witness for SwapWitness<Bn256> {
                     b: self.a_and_b[2].1,
                     ..self.args.clone()
                 },
-                lhs: self.submitter.clone(),
-                rhs: self.submitter.clone(),
+                lhs: self.submitter.0.clone(),
+                rhs: self.submitter.0.clone(),
+            },
+            Operation {
+                new_root: self.roots[4],
+                tx_type: self.tx_type,
+                chunk: Some(fr_from(5)),
+                pubdata_chunk: Some(pubdata_chunks[5]),
+                first_sig_msg: Some(input.2.first_sig_msg),
+                second_sig_msg: Some(input.2.second_sig_msg),
+                third_sig_msg: Some(input.2.third_sig_msg),
+                forth_sig_msg: Some(input.2.forth_sig_msg),
+                signature_data: input.2.signature.clone(),
+                signer_pub_key_packed: input.2.signer_pub_key_packed.to_vec(),
+                args: OperationArguments {
+                    a: self.a_and_b[2].0,
+                    b: self.a_and_b[2].1,
+                    ..self.args.clone()
+                },
+                lhs: self.submitter.1.clone(),
+                rhs: self.submitter.1.clone(),
             },
         ]
     }
@@ -620,19 +650,34 @@ impl SwapWitness<Bn256> {
                     },
                 ],
             ),
-            submitter: OperationBranch {
-                address: Some(submitter_fe),
-                token: Some(fee_token_fe),
-                obsolete: Some(Fr::zero()),
-                witness: OperationBranchWitness {
-                    account_witness: witnesses[4].0.clone(),
-                    balance_value: Some(witnesses[4].2),
-                    signal_value: Some(witnesses[4].4),
-                    account_path: lhs_paths[4].0.clone(),
-                    balance_subtree_path: lhs_paths[4].1.clone(),
-                    signal_subtree_path: lhs_paths[4].2.clone(),
+            submitter: (
+                OperationBranch {
+                    address: Some(submitter_fe),
+                    token: Some(fee_token_fe),
+                    obsolete: Some(Fr::zero()),
+                    witness: OperationBranchWitness {
+                        account_witness: witnesses[4].0.clone(),
+                        balance_value: Some(witnesses[4].2),
+                        signal_value: Some(witnesses[4].4),
+                        account_path: lhs_paths[4].0.clone(),
+                        balance_subtree_path: lhs_paths[4].1.clone(),
+                        signal_subtree_path: lhs_paths[4].2.clone(),
+                    },
                 },
-            },
+                OperationBranch {
+                    address: Some(submitter_fe),
+                    token: Some(fee_token_fe),
+                    obsolete: Some(Fr::zero()),
+                    witness: OperationBranchWitness {
+                        account_witness: witnesses[4].1.clone(),
+                        balance_value: Some(witnesses[4].3),
+                        signal_value: Some(witnesses[4].5),
+                        account_path: lhs_paths[4].0.clone(),
+                        balance_subtree_path: lhs_paths[4].1.clone(),
+                        signal_subtree_path: lhs_paths[4].2.clone(),
+                    },
+                },
+            ),
             args: OperationArguments {
                 amount_packed: Some(amount_0_packed),
                 second_amount_packed: Some(amount_1_packed),

@@ -1515,25 +1515,31 @@ Performs an atomic swap of tokens between 2 Rollup accounts at an arranged ratio
 
 | Chunks | Significant bytes |
 | ------ | ----------------- |
-| 5      | 46                |
+| 6      | 55                |
 
 ##### Structure
 
-| Field       | Byte len | Value/type     | Description                                                                              |
-| ----------- | -------- | -------------- | ---------------------------------------------------------------------------------------- |
-| opcode      | 1        | `0x0b`         | Operation code                                                                           |
-| account_a   | 4        | AccountId      | Unique identifier of the first rollup account that performs a swap                       |
-| recipient_a | 4        | AccountId      | Unique identifier of the rollup account which receives the funds sent by `account_b`     |
-| account_b   | 4        | AccountId      | Unique identifier of the second rollup account that performs a swap                      |
-| recipient_b | 4        | AccountId      | Unique identifier of the rollup account which receives the funds sent by `account_a`     |
-| submitter   | 4        | AccountId      | Unique identifier of the rollup account which submits the swap transaction and pays fees |
-| token_a     | 4        | TokenId        | Unique identifier of the token that account_a is swapping                                |
-| token_b     | 4        | TokenId        | Unique identifier of the token that account_b is swapping                                |
-| fee_token   | 4        | TokenId        | Unique identifier of the token in which submitter is paying fees                         |
-| amount_a    | 5        | PackedTxAmount | Full amount of funds sent by `account_a` (of `token_a`)                                  |
-| amount_b    | 5        | PackedTxAmount | Full amount of funds sent by `account_b` (of `token_b`)                                  |
-| packed_fee  | 2        | PackedFee      | Packed amount of fee paid                                                                |
-| nonce_mask  | 1        | 1 Byte         | Nonce mask <sup>\*</sup>                                                                 |
+| Field        | Byte len | Value/type     | Description                                                                              |
+| ------------ | -------- | -------------- | ---------------------------------------------------------------------------------------- |
+| opcode       | 1        | `0x0b`         | Operation code                                                                           |
+| account_a    | 4        | AccountId      | Unique identifier of the first rollup account that performs a swap                       |
+| recipient_a  | 4        | AccountId      | Unique identifier of the rollup account which receives the funds sent by `account_b`     |
+| account_b    | 4        | AccountId      | Unique identifier of the second rollup account that performs a swap                      |
+| recipient_b  | 4        | AccountId      | Unique identifier of the rollup account which receives the funds sent by `account_a`     |
+| submitter    | 4        | AccountId      | Unique identifier of the rollup account which submits the swap transaction and pays fees |
+| token_a      | 4        | TokenId        | Unique identifier of the token that account_a is swapping                                |
+| token_b      | 4        | TokenId        | Unique identifier of the token that account_b is swapping                                |
+| fee_token    | 4        | TokenId        | Unique identifier of the token in which submitter is paying fees                         |
+| amount_a     | 5        | PackedTxAmount | Full amount of funds sent by `account_a` (of `token_a`)                                  |
+| amount_b     | 5        | PackedTxAmount | Full amount of funds sent by `account_b` (of `token_b`)                                  |
+| packed_fee   | 2        | PackedFee      | Packed amount of fee paid                                                                |
+| earnest_mask | 1        | 1 Byte         | Earnest price mask <sup>†</sup>                                                          |
+| nonce_mask   | 1        | 1 Byte         | Nonce mask <sup>\*</sup>                                                                 |
+| nonce_a      | 4        | Nonce          | Nonce (obsolete) of the first order                                                      |
+| nonce_b      | 4        | Nonce          | Nonce (obsolete) of the second order                                                     |
+
+<sup>†</sup> Earnest mask is an 8-bit number. 1st bit set indicates that the swap is matched at the earnest price. Other
+bits are always 0.
 
 <sup>\*</sup> Nonce mask is an 8-bit number. 1st bit set indicates that account_a's nonce was incremented. 2nd bit set
 indicates that account_b's nonce was incremented. Other bits are always 0.
