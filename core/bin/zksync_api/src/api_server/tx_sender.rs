@@ -287,7 +287,7 @@ impl TxSender {
         Ok(())
     }
 
-    async fn verify_order_eth_signature(
+    pub(crate) async fn verify_order_eth_signature(
         &self,
         order: &Order,
         signature: Option<TxEthSignature>,

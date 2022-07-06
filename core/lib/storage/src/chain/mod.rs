@@ -3,6 +3,7 @@ pub mod block;
 pub mod mempool;
 pub mod operations;
 pub mod operations_ext;
+pub mod order;
 pub mod state;
 pub mod stats;
 
@@ -40,5 +41,9 @@ impl<'a, 'c> ChainIntermediator<'a, 'c> {
 
     pub fn mempool_schema(self) -> mempool::MempoolSchema<'a, 'c> {
         mempool::MempoolSchema(self.0)
+    }
+
+    pub fn order_schema(self) -> order::OrderSchema<'a, 'c> {
+        order::OrderSchema(self.0)
     }
 }

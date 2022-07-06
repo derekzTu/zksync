@@ -1,8 +1,8 @@
 pub use either::Either;
 use serde::{Deserialize, Serialize};
 use zksync_types::{
-    tx::{TxEthSignatureVariant, TxHash},
-    ZkSyncTx, H256,
+    tx::{TxEthSignature, TxEthSignatureVariant, TxHash},
+    Order, ZkSyncTx, H256,
 };
 
 pub mod v02;
@@ -24,4 +24,12 @@ pub enum PriorityOpLookupQuery {
     ByEthHash(H256),
     /// Query priority operation using any of both hashes.
     ByAnyHash(TxHash),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderWithSignature {
+    pub order: Order,
+    #[serde(default)]
+    pub signature: Option<TxEthSignature>,
 }

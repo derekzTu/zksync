@@ -16,6 +16,7 @@ mod block;
 mod config;
 pub mod error;
 mod fee;
+mod order;
 mod paginate_impl;
 mod paginate_trait;
 mod response;
@@ -57,5 +58,6 @@ pub(crate) fn api_scope(tx_sender: TxSender, zk_config: &ZkSyncConfig) -> Scope 
             tx_sender.tokens.clone(),
             tx_sender.ticker_requests.clone(),
         ))
-        .service(transaction::api_scope(tx_sender))
+        .service(transaction::api_scope(tx_sender.clone()))
+        .service(order::api_scope(tx_sender))
 }
