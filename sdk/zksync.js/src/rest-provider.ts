@@ -521,6 +521,7 @@ export class RestProvider extends SyncProvider {
         const defaultInfo = {
             balances: {},
             nonce: 0,
+            succ: undefined,
             pubKeyHash: 'sync:0000000000000000000000000000000000000000',
             nfts: {},
             mintedNfts: {}
@@ -535,6 +536,7 @@ export class RestProvider extends SyncProvider {
                 committed: {
                     balances: fullInfo.committed.balances,
                     nonce: fullInfo.committed.nonce,
+                    succ: fullInfo.committed.succ,
                     pubKeyHash: fullInfo.committed.pubKeyHash,
                     nfts: fullInfo.committed.nfts,
                     mintedNfts: fullInfo.committed.mintedNfts
@@ -542,6 +544,7 @@ export class RestProvider extends SyncProvider {
                 verified: {
                     balances: fullInfo.finalized.balances,
                     nonce: fullInfo.finalized.nonce,
+                    succ: fullInfo.finalized.succ,
                     pubKeyHash: fullInfo.finalized.pubKeyHash,
                     nfts: fullInfo.finalized.nfts,
                     mintedNfts: fullInfo.finalized.mintedNfts
@@ -556,6 +559,7 @@ export class RestProvider extends SyncProvider {
                 committed: {
                     balances: fullInfo.committed.balances,
                     nonce: fullInfo.committed.nonce,
+                    succ: fullInfo.committed.succ,
                     pubKeyHash: fullInfo.committed.pubKeyHash,
                     nfts: fullInfo.committed.nfts,
                     mintedNfts: fullInfo.committed.mintedNfts

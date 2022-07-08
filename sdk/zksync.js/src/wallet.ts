@@ -465,7 +465,7 @@ export class Wallet {
             throw new Error('zkSync signer is required for signing an order');
         }
         await this.setRequiredAccountIdFromServer('Swap order');
-        const nonce = order.nonce != null ? await this.getNonce(order.nonce) : await this.getNonce();
+        const nonce = order.nonce !== null ? await this.getSucc(order.nonce) : await this.getSucc();
         const recipient = order.recipient || this.address();
 
         let ratio: Ratio;
@@ -1209,6 +1209,14 @@ export class Wallet {
     async getNonce(nonce: Nonce = 'committed'): Promise<number> {
         if (nonce === 'committed') {
             return (await this.provider.getState(this.address())).committed.nonce;
+        } else if (typeof nonce === 'number') {
+            return nonce;
+        }
+    }
+
+    async getSucc(nonce: Nonce = null): Promise<number> {
+        if (nonce === null || nonce === 'committed') {
+            return (await this.provider.getState(this.address())).committed.succ;
         } else if (typeof nonce === 'number') {
             return nonce;
         }

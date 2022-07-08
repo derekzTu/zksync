@@ -80,6 +80,7 @@ export interface AccountState {
             [tokenId: number]: NFT;
         };
         nonce: number;
+        succ?: number;
         pubKeyHash: PubKeyHash;
     };
     verified: {
@@ -96,6 +97,7 @@ export interface AccountState {
             [tokenId: number]: NFT;
         };
         nonce: number;
+        succ?: number;
         pubKeyHash: PubKeyHash;
     };
 }
@@ -409,6 +411,7 @@ export interface ApiAccountInfo {
     accountId: number;
     address: Address;
     nonce: number;
+    succ?: number;
     pubKeyHash: PubKeyHash;
     lastUpdateInBlock: number;
     balances: {
